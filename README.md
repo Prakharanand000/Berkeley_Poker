@@ -9,7 +9,7 @@ Players: Prakhar, Vedant, Tanmay, Saurav, Niti, Vaishali, Vedika, Jasjyot, Amal,
 | Where | What you get |
 | --- | --- |
 | Your Render deploy (see below), e.g. `https://berkeley-poker.onrender.com` | Live multiplayer: up to 10 people on their own devices |
-| GitHub Pages: `https://prakharanand000.github.io/berkeley-poker/` | Solo demo: you against 9 bots (Pages has no server, so no multiplayer) |
+| GitHub Pages: `https://prakharanand000.github.io/Berkeley_Poker/` | Solo demo: you against 9 bots (Pages has no server, so no multiplayer) |
 | `http://localhost:3000` after `npm start` | Multiplayer on your machine; friends on the same Wi-Fi join at `http://<your-ip>:3000` |
 
 Want a separate game? Add `?table=friday` (any name) to the link. Each table keeps its own seats and chips.
@@ -26,7 +26,7 @@ Then open http://localhost:3000.
 ## Deploy for multiplayer (Render, free)
 
 1. Push this folder to GitHub.
-2. Go to https://render.com/deploy?repo=https://github.com/Prakharanand000/berkeley-poker and sign in with GitHub. Render reads `render.yaml` and creates a free Node web service.
+2. Go to https://render.com/deploy?repo=https://github.com/Prakharanand000/Berkeley_Poker and sign in with GitHub. Render reads `render.yaml` and creates a free Node web service.
 3. When the deploy finishes, share the `onrender.com` link with your friends.
 
 Things to know about Render's free plan:
@@ -38,7 +38,7 @@ Any other Node 18+ host that supports WebSockets works the same way (Railway, Fl
 
 ## Turn on the GitHub Pages demo
 
-Repository Settings → Pages → Build and deployment → Source: "Deploy from a branch", Branch: `main`, folder `/ (root)` → Save. The demo appears at `https://prakharanand000.github.io/berkeley-poker/` a minute later.
+Repository Settings → Pages → Build and deployment → Source: "Deploy from a branch", Branch: `main`, folder `/ (root)` → Save. The demo appears at `https://prakharanand000.github.io/Berkeley_Poker/` a minute later.
 
 ## How it works
 
