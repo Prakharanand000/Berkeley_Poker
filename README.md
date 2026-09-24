@@ -1,5 +1,8 @@
 # Berkeley Poker
 
+**Play with friends:** https://berkeley-poker.onrender.com  
+**Solo demo (you vs bots):** https://prakharanand000.github.io/Berkeley_Poker/
+
 A 10-seat no-limit Texas hold'em table for a group of friends. Everyone opens the same link, picks who they are from the "Who are you?" screen, and plays from their own phone or laptop. Seats nobody picks are played by bots, and the table trash-talks in Hinglish the whole time (Tolendi sticks to English).
 
 Players: Prakhar, Vedant, Tanmay, Saurav, Niti, Vaishali, Vedika, Jasjyot, Amal, Tolendi.
@@ -8,8 +11,8 @@ Players: Prakhar, Vedant, Tanmay, Saurav, Niti, Vaishali, Vedika, Jasjyot, Amal,
 
 | Where | What you get |
 | --- | --- |
-| Your Render deploy (see below), e.g. `https://berkeley-poker.onrender.com` | Live multiplayer: up to 10 people on their own devices |
-| GitHub Pages: `https://prakharanand000.github.io/Berkeley_Poker/` | Solo demo: you against 9 bots (Pages has no server, so no multiplayer) |
+| Render: https://berkeley-poker.onrender.com | Live multiplayer: up to 10 people on their own devices |
+| GitHub Pages: https://prakharanand000.github.io/Berkeley_Poker/ | Solo demo: you against 9 bots (Pages has no server, so no multiplayer) |
 | `http://localhost:3000` after `npm start` | Multiplayer on your machine; friends on the same Wi-Fi join at `http://<your-ip>:3000` |
 
 Want a separate game? Add `?table=friday` (any name) to the link. Each table keeps its own seats and chips.
