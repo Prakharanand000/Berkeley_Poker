@@ -1,0 +1,1945 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Berkeley Poker: a 10-seat no-limit hold'em table for friends, with bots and a lot of trash talk.">
+<script src="claude-shim.js"></script>
+<title>Berkeley Poker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&family=Kalam:wght@400;700&family=Manrope:wght@500;600;700;800&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --bg:#050E19;
+  --surface:#0B1A2C;
+  --line:#1E3553;
+  --ink:#E8EEF6;
+  --muted:#8BA0B8;
+  --gold:#FDB515;
+  --gold-ink:#1C1400;
+  --founders:#3B7EA1;
+  --blue:#003262;
+  --card-ink:#151A22;
+  --red:#C8102E;
+  --paper:#FFF7DD;
+  --ok:#34D399;
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --body:"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --hand:"Kalam","Comic Sans MS","Chalkboard SE",cursive;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px}
+button{font-family:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+.app{max-width:1440px;margin:0 auto;padding-inline:16px;padding-block:16px 28px}
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 20px;margin-bottom:12px}
+h1{margin:0;font:900 42px/.92 var(--display);letter-spacing:.02em;text-transform:uppercase;text-wrap:balance}
+h1 span{color:var(--gold)}
+.meta{margin:6px 0 0;color:var(--muted);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.toggles{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tog{height:34px;padding:0 13px;border-radius:99px;background:#0F2034;border:1px solid var(--line);font:700 13px var(--body);cursor:pointer;white-space:nowrap}
+.tog[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+.tog.seat{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
+.tog.danger{border-color:var(--red);color:#FFB3BF}
+.conn{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:99px;background:#0F2034;border:1px solid var(--line);font:700 12px var(--body);color:var(--muted);white-space:nowrap}
+.conn::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--dot,#64748B)}
+.conn.on{--dot:var(--ok);color:var(--ink)}
+.conn.wait{--dot:var(--gold)}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+@media (min-width:1100px){
+  .layout{grid-template-columns:minmax(0,1fr) 330px;align-items:start}
+  .talk{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+}
+
+/* ---------- stage ---------- */
+.stageWrap{position:relative;width:100%;overflow:hidden;background:radial-gradient(ellipse 60% 55% at 50% 50%,rgba(27,107,184,.16),transparent 70%)}
+.stage{position:absolute;top:0;left:0;transform-origin:0 0}
+.stage[data-mode="land"]{--bw:58px;--bh:82px;--hw:36px;--hh:50px;--mw:48px;--mh:66px}
+.stage[data-mode="port"]{--bw:50px;--bh:70px;--hw:32px;--hh:44px;--mw:44px;--mh:60px}
+.layer{position:absolute;inset:0;pointer-events:none}
+
+.table{position:absolute;border-radius:999px;background:linear-gradient(180deg,#1C2B40 0%,#0C1522 55%,#070D16 100%);box-shadow:0 0 0 1px #2A3F5C,0 30px 70px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
+.felt{position:absolute;inset:16px;border-radius:999px;overflow:hidden;background:radial-gradient(ellipse 75% 70% at 50% 45%,#1B6BB8 0%,#0F4F92 38%,#083A73 70%,#052A55 100%);box-shadow:inset 0 0 0 2px rgba(253,181,21,.5),inset 0 10px 40px rgba(0,0,0,.5)}
+.felt::after{content:"";position:absolute;inset:30px;border-radius:999px;border:1.5px solid rgba(232,238,246,.10)}
+.print1{position:absolute;left:0;right:0;top:11%;text-align:center;font:900 38px/1 var(--display);letter-spacing:.3em;padding-left:.3em;text-transform:uppercase;color:rgba(253,181,21,.16)}
+.print2{position:absolute;left:0;right:0;bottom:9%;text-align:center;font:700 11px var(--body);letter-spacing:.32em;text-transform:uppercase;color:rgba(232,238,246,.22)}
+.stage[data-mode="port"] .print1{font-size:24px;letter-spacing:.2em;padding-left:.2em;top:12%}
+.stage[data-mode="port"] .print2{font-size:10px;letter-spacing:.18em;bottom:8%}
+
+.center{position:absolute;translate:-50% -50%;display:flex;flex-direction:column;align-items:center;gap:10px;width:430px}
+.stage[data-mode="port"] .center{width:300px;gap:8px}
+.potRow{display:flex;align-items:baseline;gap:8px}
+.potLbl{font:800 11px var(--body);letter-spacing:.18em;text-transform:uppercase;color:rgba(232,238,246,.6)}
+.pot{font:900 32px/1 var(--display);color:var(--gold);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.board{display:flex;gap:8px}
+.stage[data-mode="port"] .board{gap:5px}
+.status{font:600 13px var(--body);color:#DDE7F3;background:rgba(2,14,28,.5);padding:5px 12px;border-radius:99px;min-height:27px;max-width:100%;text-align:center}
+.stage[data-mode="port"] .status{font-size:15px}
+
+/* cards */
+.card{position:relative;width:var(--cw);height:var(--ch);border-radius:calc(var(--cw)*.12);background:linear-gradient(180deg,#FFFDF7,#EDE7D8);color:var(--card-ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 3px 8px rgba(0,0,0,.4);flex:none;font-family:var(--body);font-weight:800;line-height:1;overflow:hidden}
+.card .r{position:absolute;left:9%;top:7%;font-size:calc(var(--cw)*.44);letter-spacing:-.06em}
+.card .s{position:absolute;right:8%;bottom:4%;font-size:calc(var(--cw)*.56)}
+.card.red{color:var(--red)}
+.card.back{background:repeating-linear-gradient(45deg,rgba(253,181,21,.38) 0 1.5px,transparent 1.5px 6px),repeating-linear-gradient(-45deg,rgba(253,181,21,.38) 0 1.5px,transparent 1.5px 6px),var(--blue);box-shadow:inset 0 0 0 2px #EFE8D6,inset 0 0 0 4px var(--blue),0 3px 8px rgba(0,0,0,.4)}
+.card.muck{opacity:.38}
+.card.deal{animation:deal .38s cubic-bezier(.2,.8,.3,1) both}
+.card.flip{animation:flip .42s ease-out both}
+@keyframes deal{from{opacity:0;translate:0 -18px;scale:.85}}
+@keyframes flip{from{transform:rotateY(90deg)}}
+.slot{width:var(--cw);height:var(--ch);border-radius:calc(var(--cw)*.12);border:1.5px dashed rgba(232,238,246,.16);flex:none}
+.board .card,.board .slot{--cw:var(--bw);--ch:var(--bh)}
+
+/* seats */
+.seat{position:absolute;translate:-50% -50%;width:156px;display:flex;flex-direction:column;align-items:center}
+.stage[data-mode="port"] .seat{width:118px}
+.hole{display:flex;justify-content:center;height:var(--hh);margin-bottom:-14px;position:relative;z-index:1}
+.seat.me .hole{height:var(--mh)}
+.hole .card{--cw:var(--hw);--ch:var(--hh);rotate:-6deg}
+.seat.me .hole .card{--cw:var(--mw);--ch:var(--mh)}
+.hole .card + .card{rotate:6deg;margin-left:-12px}
+.plate{position:relative;z-index:2;width:100%;display:flex;align-items:center;gap:8px;padding:6px 10px 6px 6px;background:linear-gradient(180deg,#13263D,#0A1726);border:1px solid #274263;border-radius:14px;box-shadow:0 6px 16px rgba(0,0,0,.45);transition:box-shadow .2s,border-color .2s,opacity .25s}
+.seat.me .plate{border-color:rgba(253,181,21,.6)}
+.avw{position:relative;flex:none}
+.av{width:34px;height:34px;border-radius:50%;background:var(--pc);color:#0B1320;display:grid;place-items:center;font:800 16px var(--body);box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)}
+.dot{position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;border-radius:50%;background:var(--ok);border:2px solid #0B1828}
+.dot.off{background:#64748B}
+.info{min-width:0}
+.nm{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.botTag{font:800 8px var(--body);letter-spacing:.12em;color:var(--muted);border:1px solid #2F4A6E;border-radius:4px;padding:1px 4px;margin-left:5px;vertical-align:2px}
+.ch{font-size:12px;font-weight:600;color:#C9D6E6;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ch::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gold);margin-right:5px}
+.stage[data-mode="port"] .nm{font-size:15px}
+.stage[data-mode="port"] .ch{font-size:14px}
+.stage[data-mode="port"] .av{width:30px;height:30px;font-size:15px}
+.stage[data-mode="port"] .botTag{display:none}
+.badges{position:absolute;top:-10px;right:-7px;display:flex;gap:3px;z-index:3;align-items:center}
+.dbtn{width:22px;height:22px;border-radius:50%;background:#F7F4EC;color:#111;display:grid;place-items:center;font:800 11px var(--body);box-shadow:0 2px 4px rgba(0,0,0,.5),inset 0 0 0 2px #D9D2BF}
+.blind{height:18px;padding:0 6px;border-radius:9px;background:#0B1726;border:1px solid var(--founders);color:#BFDDEE;font:800 10px var(--body);letter-spacing:.06em;display:grid;place-items:center}
+.blind.bb{border-color:var(--gold);color:var(--gold)}
+.tag{position:absolute;left:50%;bottom:-11px;translate:-50% 0;white-space:nowrap;padding:2px 8px;border-radius:99px;background:#0E1E32;border:1px solid #2A4466;color:#B7C6D8;font:700 10px var(--body);letter-spacing:.06em;text-transform:uppercase;z-index:3}
+.stage[data-mode="port"] .tag{font-size:12px}
+.tag.raise{color:var(--gold);border-color:rgba(253,181,21,.6)}
+.tag.allin{background:var(--red);border-color:var(--red);color:#fff}
+.tag.hand{text-transform:none;letter-spacing:0;font-size:11px;color:var(--ink)}
+.tag.hand.best{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
+.won{position:absolute;top:-11px;left:-6px;z-index:4;background:var(--gold);color:var(--gold-ink);font:800 13px var(--body);padding:2px 9px;border-radius:99px;box-shadow:0 4px 14px rgba(253,181,21,.45);font-variant-numeric:tabular-nums;animation:rise .45s ease-out both}
+@keyframes rise{from{opacity:0;translate:0 8px}}
+.tmr{position:absolute;left:12px;right:12px;bottom:3px;height:3px;pointer-events:none}
+.tmr i{display:block;height:100%;border-radius:2px;background:var(--gold);transform-origin:left center;animation:tick linear forwards}
+@keyframes tick{from{transform:scaleX(var(--from,1))}to{transform:scaleX(0)}}
+.seat.turn .plate{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 26px rgba(253,181,21,.5)}
+.seat.win .plate{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 30px rgba(253,181,21,.6)}
+.seat.folded .plate{opacity:.45}
+
+.bet{position:absolute;translate:-50% -50%;display:flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border-radius:99px;background:rgba(2,16,32,.55);font:700 13px var(--body);color:#F4F7FB;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stage[data-mode="port"] .bet{font-size:15px}
+.chip{position:relative;display:inline-block;width:17px;height:17px;border-radius:50%;background:repeating-conic-gradient(var(--gold) 0 30deg,#F7F4EC 30deg 45deg);box-shadow:0 1px 2px rgba(0,0,0,.5)}
+.chip::after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--gold)}
+
+.bubble{position:absolute;translate:-50% 0;max-width:230px;width:max-content;padding:8px 13px 9px;background:var(--paper);color:#1B1508;font:700 17px/1.2 var(--hand);border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,.45);opacity:0;visibility:hidden;text-align:center;transition:opacity .3s,visibility .3s}
+.bubble.show{opacity:1;visibility:visible;animation:pop .28s cubic-bezier(.3,1.6,.5,1) both}
+.bubble::after{content:"";position:absolute;left:calc(50% + var(--tx,0px));bottom:-7px;translate:-50% 0;border:8px solid transparent;border-top-color:var(--paper);border-bottom:0}
+.bubble.below::after{bottom:auto;top:-7px;border-top:0;border-bottom:8px solid var(--paper)}
+.stage[data-mode="port"] .bubble{font-size:20px;max-width:210px}
+@keyframes pop{from{scale:.6;opacity:0}}
+
+/* ---------- controls ---------- */
+.controls{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px 22px;align-items:center;transition:border-color .2s,box-shadow .2s}
+.controls.live{border-color:rgba(253,181,21,.6);box-shadow:0 0 0 1px rgba(253,181,21,.25),0 0 30px rgba(253,181,21,.08)}
+@media (max-width:760px){.controls{grid-template-columns:1fr}}
+.myhand{display:flex;gap:12px;align-items:center}
+.myCards{display:flex;gap:6px}
+.myCards .card,.myCards .slot{--cw:44px;--ch:62px}
+.cap{font:800 11px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+#myHand{font:800 18px/1.2 var(--body);margin-top:3px}
+.turnInfo{font:700 13px var(--body);color:var(--muted);margin-bottom:9px;min-height:18px;font-variant-numeric:tabular-nums}
+.controls.live .turnInfo{color:var(--gold)}
+.acts{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:10px;align-items:end}
+@media (max-width:560px){.acts{grid-template-columns:1fr 1fr}.raiseBox{grid-column:1/-1}}
+.btn{height:46px;padding:0 18px;border-radius:12px;font:800 15px var(--body);border:1px solid transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;font-variant-numeric:tabular-nums;transition:filter .15s,opacity .15s}
+.btn:hover:not(:disabled){filter:brightness(1.1)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.fold{background:transparent;border-color:#3A4F6B}
+.btn.fold:hover:not(:disabled){border-color:var(--red)}
+.btn.call{background:var(--founders);color:#fff}
+.btn.raise{background:var(--gold);color:var(--gold-ink);flex:none}
+.btn.ghost{background:transparent;border-color:#3A4F6B;height:40px}
+kbd{font:700 10px var(--body);padding:1px 5px;border-radius:4px;background:rgba(0,0,0,.22);opacity:.85}
+@media (max-width:560px),(hover:none){kbd{display:none}}
+.raiseBox{display:flex;flex-direction:column;gap:8px;min-width:0}
+.raiseBox.off{opacity:.4}
+.presets{display:flex;gap:6px;flex-wrap:wrap}
+.pre{height:28px;padding:0 11px;border-radius:99px;background:#13263D;border:1px solid var(--line);font:700 12px var(--body);cursor:pointer}
+.pre:disabled{opacity:.5;cursor:not-allowed}
+.rrow{display:flex;gap:10px;align-items:center}
+.rrow input{flex:1;min-width:0;accent-color:var(--gold);height:28px}
+
+/* ---------- talk ---------- */
+.talk{background:var(--surface);border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
+.talkHead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:12px 14px 10px;border-bottom:1px solid var(--line)}
+.talkHead h2{margin:0;font:900 22px/1 var(--display);letter-spacing:.05em;text-transform:uppercase}
+.talkHead span{font-size:12px;color:var(--muted);font-weight:600}
+.log{overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:9px;height:clamp(240px,50vh,540px)}
+@media (max-width:1099px){.log{height:260px}}
+.msg{display:flex;gap:10px;align-items:baseline;font:400 17px/1.25 var(--hand)}
+.msg b{font:800 12px var(--body);flex:none;min-width:60px}
+.sys{font:700 11px var(--body);color:var(--muted);letter-spacing:.06em;text-transform:uppercase;padding-top:6px;border-top:1px dashed rgba(139,160,184,.22)}
+.quick{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 0;border-top:1px solid var(--line)}
+.qc{height:30px;padding:0 11px;border-radius:99px;background:#13263D;border:1px solid var(--line);font:700 15px var(--hand);cursor:pointer}
+.qc:hover:not(:disabled){border-color:var(--gold)}
+.qc:disabled{opacity:.45;cursor:not-allowed}
+.say{display:flex;gap:8px;padding:10px 14px 14px}
+.say input{flex:1;min-width:0;height:40px;border-radius:10px;border:1px solid var(--line);background:#081424;color:var(--ink);padding:0 12px;font:500 14px var(--body)}
+.say .btn{height:40px;padding:0 14px;background:#13263D;border-color:var(--line)}
+
+/* ---------- seat picker ---------- */
+.picker{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(3,9,17,.74);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.pickCard{width:min(580px,100%);max-height:calc(100% - 32px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.pickCard h2{margin:0;font:900 44px/1 var(--display);text-transform:uppercase;letter-spacing:.02em}
+.pickSub{margin:8px 0 16px;color:var(--muted);font-weight:600;line-height:1.45;max-width:52ch}
+.pickGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:480px){.pickGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.pickCard h2{font-size:36px}}
+.tile{display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;background:#0F2034;border:1px solid var(--line);cursor:pointer;text-align:left;min-width:0}
+.tile:hover:not(:disabled){border-color:var(--gold)}
+.tile:disabled{opacity:.42;cursor:not-allowed}
+.tile.mine{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.tile .av{width:36px;height:36px;flex:none}
+.tile span{min-width:0}
+.tile b{display:block;font:800 15px var(--body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile small{display:block;font:600 12px var(--body);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pickFoot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-top:16px}
+#pickMsg{color:var(--gold);font-weight:700;font-size:13px;min-height:18px}
+
+@media (prefers-reduced-motion:reduce){
+  .card.deal,.card.flip,.bubble.show,.won{animation:none}
+  .bubble,.plate{transition:none}
+  .tmr i{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div>
+      <h1>Berkeley <span>Poker</span></h1>
+      <p class="meta">No-limit Hold'em · Blinds 10/20 · Buy-in 1,000 · <span id="handNo">Hand #1</span></p>
+    </div>
+    <div class="toggles">
+      <span class="conn wait" id="liveChip">Connecting</span>
+      <button class="tog" id="tSeat" type="button">Pick your seat</button>
+      <button class="tog" id="tGaali" type="button" aria-pressed="true">Gaali mode: On</button>
+      <button class="tog" id="tSpeed" type="button" aria-pressed="false" hidden>Speed: 1x</button>
+      <button class="tog" id="tReset" type="button" hidden>Reset chips</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section>
+      <div class="stageWrap" id="stageWrap">
+        <div class="stage" id="stage" data-mode="land">
+          <div class="table" id="table"><div class="felt"><div class="print1">Berkeley Poker</div><div class="print2">No limit hold'em · Blinds 10/20</div></div></div>
+          <div class="center" id="center">
+            <div class="potRow"><span class="potLbl">Pot</span><span class="pot" id="pot">0</span></div>
+            <div class="board" id="board"></div>
+            <div class="status" id="status" aria-live="polite"></div>
+          </div>
+          <div class="layer" id="betsLayer"></div>
+          <div class="layer" id="seatsLayer"></div>
+          <div class="layer" id="bubbleLayer"></div>
+        </div>
+      </div>
+
+      <div class="controls" id="controls">
+        <div class="myhand">
+          <div class="myCards" id="myCards"></div>
+          <div><div class="cap">Your hand</div><div id="myHand">Pick a seat</div></div>
+        </div>
+        <div>
+          <div class="turnInfo" id="turnInfo"></div>
+          <div class="acts" id="acts">
+            <button class="btn fold" id="bFold" type="button"><span class="lbl">Fold</span><kbd>F</kbd></button>
+            <button class="btn call" id="bCall" type="button"><span class="lbl">Check</span><kbd>C</kbd></button>
+            <div class="raiseBox" id="raiseBox">
+              <div class="presets">
+                <button class="pre" type="button" data-p="min">Min</button>
+                <button class="pre" type="button" data-p="half">½ pot</button>
+                <button class="pre" type="button" data-p="pot">Pot</button>
+                <button class="pre" type="button" data-p="all">All-in</button>
+              </div>
+              <div class="rrow">
+                <input type="range" id="raiseRange" min="20" max="1000" value="40" step="1" aria-label="Raise amount">
+                <button class="btn raise" id="bRaise" type="button"><span class="lbl">Raise</span><kbd>R</kbd></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="talk" aria-label="Table talk">
+      <div class="talkHead"><h2>Table talk</h2><span id="talkMode">Uncensored</span></div>
+      <div class="log" id="log"></div>
+      <div class="quick" id="quick"></div>
+      <form class="say" id="sayForm">
+        <input type="text" id="sayInput" autocomplete="off" maxlength="120" placeholder="Pick a seat to talk" aria-label="Your message">
+        <button class="btn" type="submit" id="sayBtn">Send</button>
+      </form>
+    </aside>
+  </main>
+</div>
+
+<div class="picker" id="picker">
+  <div class="pickCard" role="dialog" aria-modal="true" aria-labelledby="pickTitle">
+    <h2 id="pickTitle">Who are you?</h2>
+    <p class="pickSub" id="pickSub">Pick your name to take that seat. Seats nobody picks are played by bots, and a bot takes over if you leave.</p>
+    <div class="pickGrid" id="pickGrid"></div>
+    <div class="pickFoot">
+      <span id="pickMsg"></span>
+      <button class="btn ghost" id="pickWatch" type="button">Just watch</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ================= constants ================= */
+const SB = 10, BB = 20, START = 1000;
+const TURN_MS = 30000, AWAY_MS = 8000, RELEASE_MS = 30000;
+const RCH = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+const RN  = ['Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Jack','Queen','King','Ace'];
+const RP  = ['Twos','Threes','Fours','Fives','Sixes','Sevens','Eights','Nines','Tens','Jacks','Queens','Kings','Aces'];
+const SUIT = ['♠︎','♥︎','♦︎','♣︎'];
+const B5 = 16**5, B4 = 16**4, B3 = 16**3;
+const ABORT = {abort:true};
+
+// Seats in clockwise order, which is also the order of play.
+const PEOPLE = [
+  {id:'prakhar', name:'Prakhar', g:'m', color:'#FDB515', persona:{tight:.4,  aggr:.55, bluff:.1}},
+  {id:'vedant',  name:'Vedant',  g:'m', color:'#FF8A4C', persona:{tight:.15, aggr:.8,  bluff:.2}},
+  {id:'tanmay',  name:'Tanmay',  g:'m', color:'#60A5FA', persona:{tight:.55, aggr:.65, bluff:.08}},
+  {id:'saurav',  name:'Saurav',  g:'m', color:'#A3E635', persona:{tight:.1,  aggr:.2,  bluff:.05}},
+  {id:'niti',    name:'Niti',    g:'f', color:'#E879F9', persona:{tight:.5,  aggr:.6,  bluff:.1}},
+  {id:'vaishali',name:'Vaishali',g:'f', color:'#C4B5FD', persona:{tight:.75, aggr:.35, bluff:.03}},
+  {id:'vedika',  name:'Vedika',  g:'f', color:'#2DD4BF', persona:{tight:.45, aggr:.5,  bluff:.12, slow:true}},
+  {id:'jasjyot', name:'Jasjyot', g:'m', color:'#FB7185', persona:{tight:.2,  aggr:.9,  bluff:.22, shove:true}},
+  {id:'amal',    name:'Amal',    g:'m', color:'#E7E5E4', persona:{tight:.35, aggr:.45, bluff:.15}},
+  {id:'tolendi', name:'Tolendi', g:'m', color:'#86EFAC', persona:{tight:.3,  aggr:.6,  bluff:.18}},
+];
+const N = PEOPLE.length;
+const IDX = {};
+PEOPLE.forEach((p, i) => IDX[p.id] = i);
+
+const GEO = {
+  land:{W:1000, H:590, tw:770, th:372, rx:420, ry:236, cOff:0,   betT:.5},
+  port:{W:520,  H:800, tw:336, th:560, rx:196, ry:330, cOff:-40, betT:.42},
+};
+
+/* ================= banter ================= */
+const L = {
+  vedantWin:[
+    "Vedant bitch stop cheating",
+    "Vedant ki aasteen check karo, card chhupa rakha hai pakka",
+    "Phir se Vedant?? Dealer bhi mila hua hai BC",
+    "Someone frisk Vedant please",
+    "Vedant itna luck kahan se laata hai, saale",
+  ],
+  vedantDefend:[
+    "Skill hai bhai, cheating nahi",
+    "{a} jalte raho",
+    "Main kuch nahi kar raha, {a} bas haar {a:raha/rahi} hai",
+    "Proof dikhao pehle, MF",
+  ],
+  potWin:[
+    "MF stop taking my chips",
+    "{w} MF stop taking my chips",
+    "{w}, mere chips wapas kar",
+    "Kitna {w:lootega/lootegi} {w}, BC",
+    "{w} tu toh chor hai yaar",
+    "Bas kar {w}, ghar bhi jaana hai mujhe",
+  ],
+  showdownLoss:[
+    "Tumhari ma ki chut, river pe kaise aaya ye??",
+    "Tumhari ma ki chut {w}, kya call tha wo",
+    "Bhenchod, {h} leke haar {s:gaya/gayi}",
+    "Kya chutiyapa hai ye river",
+    "Ye deck rigged hai, main ja {s:raha/rahi} hoon",
+  ],
+  foldWin:[
+    "{w} dikha toh de kya tha",
+    "Bluff tha, 100%",
+    "{w} ke paas kuch nahi tha, likh ke le lo",
+  ],
+  allIn:[
+    "All in?? {n} tu pagal hai kya",
+    "{n} ka all-in matlab bluff, guaranteed",
+    "Chal be {n}, dekh lete hain",
+    "{n} har baar all-in {n:maarta/maarti} hai BC",
+  ],
+  bigRaise:[
+    "{n} bluff kar {n:raha/rahi} hai, pakka",
+    "{n} kya chutiya raise hai ye",
+    "Arre {n}, itna bada raise? Ghar bech diya kya",
+    "Oho, {n} ko aaj cards mil gaye",
+  ],
+  humanRaise:[
+    "{n} ne raise kiya? Pakka bluff hai",
+    "{n} ke paas kuch hai, sab bhaago",
+    "{n} {n:bhai/behen} itna confidence kahan se aaya",
+  ],
+  foldStreak:[
+    "{n} fold hi {n:karta/karti} reh, gaandu",
+    "{n} khel bhi le kabhi",
+    "{n} ne phir fold kiya. Shocking.",
+  ],
+  rebuy:[
+    "{n} rebuy kar {n:raha/rahi} hai. Aur kitna {n:haarega/haaregi}",
+    "{n} ka ATM phir chalu",
+    "Paisa hai toh sab hai. Welcome back {n}",
+  ],
+  timeout:[
+    "{n} so {n:gaya/gayi} kya?",
+    "Oye {n}, tera turn tha",
+    "{n} jaldi kar yaar, raat nikal jayegi",
+  ],
+  join:[
+    "Aa {n:gaya/gayi} {n}! Ab maza aayega",
+    "{n} aa {n:gaya/gayi}, chips sambhal ke rakho",
+  ],
+  chatSwear:[
+    "Language {a}... just kidding BC",
+    "Chup kar aur khel {a}",
+  ],
+  chatAny:[
+    "Haan haan, khel ab",
+    "Sahi baat",
+    "Bakwaas kam, khel zyada",
+    "Theek hai {a}",
+  ],
+  deal:[
+    "Achhe cards de na {d}, BC",
+    "Phir se kachra cards. Randi ke bacho, shuffle kisne kiya?",
+    "Is baar pakka {s:jeetunga/jeetungi}",
+    "Cards dekh ke hi pata chal gaya, aaj ka din kharab hai",
+    "Tum sab ki maa ki chut, ye kya cards hain",
+    "{d} ke haath mein jaadu hai ya kachra?",
+    "Chalo chalo, jaldi bet lagao",
+    "Aaj sabko nanga karke {s:bhejunga/bhejungi}",
+  ],
+  flop:[
+    "Flop dekh ke rona aa gaya",
+    "Ye flop mere liye aaya hai, sab fold karo",
+    "Kya bakwaas flop hai BC",
+    "Oho, flop mein kuch toh hai",
+    "{d} ne flop fix kiya hai, pakka",
+    "Flop pe hi game khatam, randi ke bacho",
+  ],
+  turn:[
+    "Ye turn kisne maanga tha?",
+    "Turn pe kuch nahi aaya, bas bhai",
+    "Bas ek card aur, please",
+  ],
+  river:[
+    "River pe dil toot gaya",
+    "River aaya, izzat gayi",
+    "River pe hi toh khel hota hai",
+    "Ab dekhte hain kiski maa ki chut hoti hai",
+  ],
+  call:[
+    "{n} call hi {n:karega/karegi}, fold kabhi nahi",
+    "Calling station {n}",
+    "{n} ne call kiya, matlab kuch nahi hai paas mein",
+    "Sirf call? Darr {n:gaya/gayi} {n}?",
+    "{n} ka call dekh ke hi pata chal gaya",
+  ],
+  replyAny:[
+    "Hahaha BC",
+    "Sahi bola {a}",
+    "Chup kar {a}",
+    "Tu apna dekh {a}",
+    "Randi ke bacho, focus karo",
+    "Tum sab ki maa ki chut, khelo ab",
+  ],
+};
+// Tolendi only speaks English: anything the game would make him say comes from here.
+const TOL = ["Chutpaglus","Speak in English, chutpaglus","What are you guys even saying? Chutpaglus","English please. Chutpaglus","I understood none of that. Chutpaglus","Nice hand. Still chutpaglus"];
+const TOL_R = ["Tolendi ko Hindi seekhni padegi","Ok Tolendi: you are chutpaglus","Tolendi phir shuru ho gaya","Tolendi bhai, Hindi mein bol","Chutpaglus kya hota hai yaar"];
+// Catchphrases: p is who says it ('*' = anyone), r are the replies someone else may fire back.
+const SIG = [
+  {p:'niti',     t:"I am Niti bitch", r:["Haan pata hai Niti, har hand mein batati hai","Niti chup, cards dekh","Sabko pata hai Niti, bas kar"]},
+  {p:'vaishali', t:"Chaata", r:["Chaata?? Kya chaata Vaishali?","Vaishali phir se chaata","Andar baarish ho rahi hai kya Vaishali?"]},
+  {p:'vedant',   t:"Kajra Re lagao koi, mood banao", r:["Vedant gaana band kar, khel","Bhai tu singer hai ya poker player"]},
+  {p:'vedant',   t:"(Kajra Re gungunate hue) hmm hmm hmm", r:["Vedant ka concert phir shuru","Vedant gaana band kar, khel"]},
+  {p:'tanmay',   t:"Mehul ki ma ki chut", r:["Mehul ne kya kiya ab?","Bechara Mehul yahan hai bhi nahi","Tanmay ko Mehul se kya dikkat hai yaar"]},
+  {p:'saurav',   t:"Main hoon Belgium Marathi rand", r:["Belgium mein Marathi? Kya scene hai Saurav","Saurav ko koi rok lo"]},
+  {p:'saurav',   t:"(Taar Bijli gaate gaate) zzzz", r:["Saurav uth, tera turn aa raha hai","Koi Saurav ko jagao","Saurav so gaya gaate gaate"]},
+  {p:'tolendi',  t:"Chutpaglus", r:TOL_R},
+  {p:'tolendi',  t:"Speak in English, chutpaglus", r:TOL_R},
+  {p:'prakhar',  t:"Gaand ke andhe", r:["Kisko bola Prakhar?","Prakhar tu khud dekh le pehle","Prakhar aaj garam hai"]},
+  {p:'*',        t:"Randi ke bacho", r:["Tumhari bhi, BC","Arre bas karo yaar, khelo","Tum sab ki maa ki chut"]},
+  {p:'*',        t:"Tum sab ki maa ki chut", r:["Tumhari bhi, BC","Randi ke bacho, focus karo","Arre bas karo yaar, khelo"]},
+];
+const IDLE = [
+  {t:"Dealer shuffle theek se kar MC", about:'dealer'},
+  {t:"Cheese Board pizza kab aayega yaar"},
+  {t:"Amal bhai phone rakh aur khel", about:'amal'},
+  {t:"Jasjyot paaji chips toh gin lo", about:'jasjyot'},
+  {t:"Vedika slow-roll mat kar BC", about:'vedika'},
+  {t:"Vaishali aaj itna tight kyun khel rahi hai", about:'vaishali'},
+  {t:"Tanmay tera tell dikh raha hai, har baar aankh maarta hai", about:'tanmay'},
+  {t:"Saurav ne phir se beer gira di felt pe", about:'saurav'},
+  {t:"Is hand ke baad Telegraph pe chai?"},
+  {t:"Koi Vedant ki jebein check karo", about:'vedant'},
+  {t:"Blinds badhao yaar, ye toh bachchon ka game hai"},
+  {t:"Niti tu sabko cheater bolti hai, khud ka dekh", about:'niti'},
+  {t:"Tolendi ko koi Hindi subtitles do", about:'tolendi'},
+];
+const QUICK = ["Vedant bitch stop cheating","MF stop taking my chips","Randi ke bacho","Tum sab ki maa ki chut","Ship it","BC ye kya river tha"];
+const CENSOR = [
+  [/tumhari ma ki chut/gi,'tumhari ****'],
+  [/madarchod/gi,'m*******d'],
+  [/bhenchod/gi,'bh*****d'],
+  [/chutiyapa/gi,'ch*tiyapa'],
+  [/chutiya/gi,'ch*tiya'],
+  [/chutpaglus/gi,'ch*tpaglus'],
+  [/gaandu/gi,'g**ndu'],
+  [/gaand/gi,'g**nd'],
+  [/randi/gi,'r*ndi'],
+  [/\brand\b/gi,'r*nd'],
+  [/bitch/gi,'b*tch'],
+  [/fuck/gi,'f*ck'],
+  [/\bMF\b/g,'M*F'],
+  [/\bBC\b/g,'B*C'],
+  [/\bMC\b/g,'M*C'],
+  [/\bsaale\b/gi,'s*ale'],
+  [/\bchut\b/gi,'ch*t'],
+];
+
+/* ================= helpers ================= */
+const $ = s => document.querySelector(s);
+const chance = p => Math.random() < p;
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const fmt = n => Math.round(n).toLocaleString('en-US');
+const next = i => (i+1) % N;
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const randId = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4);
+const nameOf = i => PEOPLE[i].name;
+const validKey = k => (typeof k === 'string' && k.length > 0 && k.length <= 120) ? k : null;
+const validCard = c => Number.isInteger(c) && c >= 0 && c < 52;
+function lsGet(k){ try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
+function fill(t, ctx){
+  return t.replace(/\{(\w)(?::([^}\/]*)\/([^}]*))?\}/g, (m,k,a,b) => {
+    const x = ctx[k];
+    if (x == null) return '';
+    if (typeof x === 'string') return x;
+    if (a !== undefined) return x.g === 'f' ? b : a;
+    return x.name;
+  });
+}
+let gaali = true;
+function censor(t){
+  if (gaali) return t;
+  let s = t;
+  for (const [re, rep] of CENSOR) s = s.replace(re, rep);
+  return s;
+}
+
+/* ================= hand evaluation ================= */
+function pk(cat, arr){
+  let v = cat;
+  for (let i = 0; i < 5; i++) v = v*16 + (arr[i] !== undefined ? arr[i] + 1 : 0);
+  return v;
+}
+function sHigh(m){
+  for (let h = 12; h >= 4; h--){ const need = 31 << (h-4); if ((m & need) === need) return h; }
+  return ((m & 4111) === 4111) ? 3 : -1;
+}
+function eval7(cs){
+  const rc = new Array(13).fill(0), sc = [0,0,0,0], sm = [0,0,0,0];
+  let rm = 0;
+  for (const c of cs){ const r = c >> 2, s = c & 3; rc[r]++; sc[s]++; sm[s] |= 1 << r; rm |= 1 << r; }
+  let fs = -1;
+  for (let s = 0; s < 4; s++) if (sc[s] >= 5) fs = s;
+  if (fs >= 0){ const h = sHigh(sm[fs]); if (h >= 0) return pk(8,[h]); }
+  const q = [], t = [], pr = [];
+  for (let r = 12; r >= 0; r--){ if (rc[r] === 4) q.push(r); else if (rc[r] === 3) t.push(r); else if (rc[r] === 2) pr.push(r); }
+  const kick = (ex, n) => { const o = []; for (let r = 12; r >= 0 && o.length < n; r--) if (rc[r] && !ex.includes(r)) o.push(r); return o; };
+  if (q.length) return pk(7, [q[0], ...kick([q[0]],1)]);
+  if (t.length && (t.length > 1 || pr.length)) return pk(6, [t[0], Math.max(t.length > 1 ? t[1] : -1, pr.length ? pr[0] : -1)]);
+  if (fs >= 0){ const o = []; for (let r = 12; r >= 0 && o.length < 5; r--) if ((sm[fs] >> r) & 1) o.push(r); return pk(5,o); }
+  const h = sHigh(rm); if (h >= 0) return pk(4,[h]);
+  if (t.length) return pk(3, [t[0], ...kick([t[0]],2)]);
+  if (pr.length >= 2) return pk(2, [pr[0], pr[1], ...kick([pr[0],pr[1]],1)]);
+  if (pr.length) return pk(1, [pr[0], ...kick([pr[0]],3)]);
+  return pk(0, kick([],5));
+}
+function handName(v){
+  const cat = Math.floor(v/B5), a = Math.floor(v/B4)%16 - 1, b = Math.floor(v/B3)%16 - 1;
+  switch (cat){
+    case 8: return a === 12 ? 'Royal Flush' : `Straight Flush, ${RN[a]} high`;
+    case 7: return `Four ${RP[a]}`;
+    case 6: return `${RP[a]} full of ${RP[b]}`;
+    case 5: return `Flush, ${RN[a]} high`;
+    case 4: return `Straight, ${RN[a]} high`;
+    case 3: return `Three ${RP[a]}`;
+    case 2: return `Two Pair, ${RP[a]} & ${RP[b]}`;
+    case 1: return `Pair of ${RP[a]}`;
+    default: return `${RN[a]} high`;
+  }
+}
+function equity(hole, bd, nOpp, iters){
+  const used = new Set([...hole, ...bd]);
+  const rest = [];
+  for (let c = 0; c < 52; c++) if (!used.has(c)) rest.push(c);
+  const need = nOpp*2 + (5 - bd.length);
+  const full = new Array(5);
+  let win = 0;
+  for (let it = 0; it < iters; it++){
+    for (let i = 0; i < need; i++){
+      const j = i + Math.floor(Math.random()*(rest.length - i));
+      const tmp = rest[i]; rest[i] = rest[j]; rest[j] = tmp;
+    }
+    let k = 0;
+    for (let i = 0; i < 5; i++) full[i] = i < bd.length ? bd[i] : rest[k++];
+    const mine = eval7([hole[0], hole[1], ...full]);
+    let ties = 0, lost = false;
+    for (let o = 0; o < nOpp; o++){
+      const v = eval7([rest[k++], rest[k++], ...full]);
+      if (v > mine){ lost = true; break; }
+      if (v === mine) ties++;
+    }
+    if (!lost) win += 1/(ties+1);
+  }
+  return win/iters;
+}
+
+/* ================= private cards (ECDH + AES-GCM) ================= */
+const subtle = (window.crypto && window.crypto.subtle) || null;
+let myKP = null, myPkB64 = '';
+const b64 = buf => { const a = new Uint8Array(buf); let s = ''; for (let i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s); };
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const keysReady = (async () => {
+  if (!subtle) return;
+  try {
+    myKP = await subtle.generateKey({name:'ECDH', namedCurve:'P-256'}, false, ['deriveKey']);
+    myPkB64 = b64(await subtle.exportKey('raw', myKP.publicKey));
+  } catch (e) { myKP = null; myPkB64 = ''; }
+})();
+const sharedKeys = new Map();
+function sharedKey(otherPk){
+  if (!sharedKeys.has(otherPk)){
+    sharedKeys.set(otherPk, (async () => {
+      const pub = await subtle.importKey('raw', unb64(otherPk), {name:'ECDH', namedCurve:'P-256'}, false, []);
+      return subtle.deriveKey({name:'ECDH', public:pub}, myKP.privateKey, {name:'AES-GCM', length:128}, false, ['encrypt','decrypt']);
+    })());
+  }
+  return sharedKeys.get(otherPk);
+}
+async function encFor(pkStr, cards){
+  if (!subtle || !myKP) return null;
+  try {
+    const k = await sharedKey(pkStr);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await subtle.encrypt({name:'AES-GCM', iv}, k, new TextEncoder().encode(JSON.stringify(cards)));
+    return [pkStr.slice(-10), b64(iv), b64(ct)];
+  } catch (e) { return null; }
+}
+async function decFrom(hostPk, e){
+  const k = await sharedKey(hostPk);
+  const pt = await subtle.decrypt({name:'AES-GCM', iv:unb64(e[1])}, k, unb64(e[2]));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+/* ================= shared state ================= */
+function freshSeat(){ return {owner:null, chips:START, bet:0, total:0, folded:false, allIn:false, dealt:false, last:'', lastType:'', won:0, shown:null, enc:null, hand:'', rb:0}; }
+function freshState(){
+  return {v:0, ep:'', et:0, hn:0, d:Math.floor(Math.random()*N), sb:-1, bb:-1, st:'wait', tu:-1, cb:0, mr:BB, bd:[], ti:'', tm:0,
+    su:'Pick a seat to start', hp:'', hu:'', hk:'', na:0, seats:PEOPLE.map(freshSeat)};
+}
+let S = freshState();
+const potTotal = () => S.seats.reduce((a, s) => a + s.total, 0);
+
+function pack(){
+  return {v:S.v, ep:S.ep, et:S.et, hn:S.hn, d:S.d, sb:S.sb, bb:S.bb, st:S.st, tu:S.tu, cb:S.cb, mr:S.mr, bd:S.bd, ti:S.ti, tm:S.tm,
+    su:S.su, hp:S.hp, hu:S.hu, hk:S.hk, na:S.na,
+    s:S.seats.map(x => [x.owner || 0, x.chips, x.bet, x.total, (x.folded?1:0)|(x.allIn?2:0)|(x.dealt?4:0), x.last || '', x.lastType || '',
+      x.won || 0, x.shown || 0, x.enc || 0, x.hand || '', x.rb || 0])};
+}
+function unpack(o){
+  if (!o || typeof o !== 'object' || !Array.isArray(o.s) || o.s.length !== N) return null;
+  const num = (x, d = 0) => (typeof x === 'number' && isFinite(x)) ? x : d;
+  const str = (x, n = 200) => typeof x === 'string' ? x.slice(0, n) : '';
+  const seats = o.s.map(a => {
+    a = Array.isArray(a) ? a : [];
+    const shown = Array.isArray(a[8]) && a[8].length === 2 && a[8].every(validCard) ? a[8] : null;
+    const enc = Array.isArray(a[9]) ? a[9].filter(e => Array.isArray(e) && e.length === 3 && e.every(x => typeof x === 'string')).slice(0, 6) : null;
+    return {owner:validKey(a[0]), chips:num(a[1]), bet:num(a[2]), total:num(a[3]), folded:!!(a[4] & 1), allIn:!!(a[4] & 2), dealt:!!(a[4] & 4),
+      last:str(a[5], 60), lastType:str(a[6], 20), won:num(a[7]), shown, enc:enc && enc.length ? enc : null, hand:str(a[10], 60), rb:num(a[11])};
+  });
+  const idx = x => (Number.isInteger(x) && x >= -1 && x < N) ? x : -1;
+  return {v:num(o.v), ep:str(o.ep, 40), et:num(o.et), hn:num(o.hn), d:Math.max(0, idx(o.d)), sb:idx(o.sb), bb:idx(o.bb), st:str(o.st, 12) || 'wait',
+    tu:idx(o.tu), cb:num(o.cb), mr:num(o.mr, BB) || BB, bd:Array.isArray(o.bd) ? o.bd.filter(validCard).slice(0, 5) : [], ti:str(o.ti, 80), tm:num(o.tm),
+    su:str(o.su, 160), hp:str(o.hp, 120), hu:str(o.hu, 80), hk:str(o.hk, 120), na:num(o.na), seats};
+}
+
+/* ================= environment ================= */
+let db = null, room = null, user = null;
+let cid = lsGet('bp.cid');
+if (!cid){ cid = randId(); lsSet('bp.cid', cid); }
+let myKey = 'c:' + cid;
+let isHost = false, localMode = false, canHost = false, capsReady = false, hostOnline = false, isOwner = false;
+let H = null, engine = null, pace = 1;
+let myReq;                 // undefined = no request yet, '' = watching, otherwise a seat id
+let mySeat = -1, rot = 0;
+let myDec = {hu:'', cards:null}, decBusy = false;
+let sentTi = '', setupTi = '', lastTi = '', tiSeenAt = 0;
+let peerKeys = new Set();
+let sayN = 0;
+const myPres = {};
+let tabId = null;
+try { tabId = sessionStorage.getItem('bp.tab'); if (!tabId){ tabId = randId(); sessionStorage.setItem('bp.tab', tabId); } } catch (e) { tabId = randId(); }
+
+function isOnlineKey(k){ return !!k && (k === myKey || peerKeys.has(k)); }
+function hostAlive(){ return localMode || isHost || hostOnline; }
+function setPresence(patch){
+  Object.assign(myPres, patch);
+  if (room){ try { room.presence(patch).catch(() => {}); } catch (e) {} }
+}
+function emit(topic, data){
+  if (!room) return;
+  try { if (room.connected()) room.emit(topic, data).catch(() => {}); } catch (e) {}
+}
+
+/* ================= DOM ================= */
+const wrap = $('#stageWrap'), stage = $('#stage'), tableEl = $('#table'), centerEl = $('#center');
+const boardEl = $('#board'), potEl = $('#pot'), statusEl = $('#status'), logEl = $('#log');
+const picker = $('#picker'), pickGrid = $('#pickGrid'), pickMsgEl = $('#pickMsg');
+let G = GEO.land, mode = 'land';
+const E = PEOPLE.map(p => {
+  const seat = document.createElement('div');
+  seat.className = 'seat';
+  seat.innerHTML = `<div class="hole"></div><div class="plate"><div class="won" hidden></div><div class="avw"><div class="av" style="--pc:${p.color}">${p.name[0]}</div><span class="dot" hidden></span></div><div class="info"><div class="nm">${p.name}<span class="botTag">BOT</span></div><div class="ch"></div></div><div class="badges"></div><div class="tag" hidden></div><div class="tmr"></div></div>`;
+  const bet = document.createElement('div');
+  bet.className = 'bet'; bet.hidden = true;
+  bet.innerHTML = '<i class="chip"></i><span></span>';
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  $('#betsLayer').append(bet);
+  $('#seatsLayer').append(seat);
+  $('#bubbleLayer').append(bub);
+  return {seat, hole:seat.querySelector('.hole'), ch:seat.querySelector('.ch'), badges:seat.querySelector('.badges'), tag:seat.querySelector('.tag'),
+    won:seat.querySelector('.won'), dot:seat.querySelector('.dot'), bot:seat.querySelector('.botTag'), tmr:seat.querySelector('.tmr'),
+    bet, betAmt:bet.querySelector('span'), bubble:bub, pos:{x:0,y:0}, _hk:null, _hu:null, _face:'', _ti:null};
+});
+
+function cardHTML(c, cls = '', attr = ''){
+  if (c == null || !validCard(c)) return `<div class="card back ${cls}" ${attr}></div>`;
+  const r = c >> 2, s = c & 3;
+  return `<div class="card ${s === 1 || s === 2 ? 'red' : ''} ${cls}" ${attr}><span class="r">${RCH[r]}</span><span class="s">${SUIT[s]}</span></div>`;
+}
+
+function layout(){
+  const w = wrap.clientWidth;
+  if (!w) return;
+  mode = w < 640 ? 'port' : 'land';
+  G = GEO[mode];
+  const scale = Math.min(w / G.W, mode === 'land' ? 1.15 : 1.3);
+  stage.dataset.mode = mode;
+  stage.style.width = G.W + 'px';
+  stage.style.height = G.H + 'px';
+  stage.style.transform = `scale(${scale})`;
+  stage.style.left = Math.max(0, (w - G.W*scale)/2) + 'px';
+  wrap.style.height = Math.ceil(G.H*scale) + 'px';
+  const cx = G.W/2, cy = G.H/2;
+  Object.assign(tableEl.style, {left:(cx - G.tw/2)+'px', top:(cy - G.th/2)+'px', width:G.tw+'px', height:G.th+'px'});
+  centerEl.style.left = cx + 'px';
+  centerEl.style.top = (cy + G.cOff) + 'px';
+  rot = mySeat >= 0 ? mySeat : 0;
+  E.forEach((e, i) => {
+    const slot = (i - rot + N) % N;
+    const a = (90 + slot*360/N) * Math.PI/180;
+    const x = cx + G.rx*Math.cos(a), y = cy + G.ry*Math.sin(a);
+    e.pos = {x, y};
+    e.seat.style.left = x + 'px';
+    e.seat.style.top = y + 'px';
+    e.bet.style.left = (x + (cx - x)*G.betT) + 'px';
+    e.bet.style.top = (y + (cy - y)*G.betT) + 'px';
+    if (e.bubble.classList.contains('show')) placeBubble(i);
+  });
+}
+
+/* ================= rendering ================= */
+function myCards(){
+  if (mySeat < 0) return null;
+  const s = S.seats[mySeat];
+  if (!s.dealt) return null;
+  if (s.shown) return s.shown;
+  if (isHost && H && H.hole && H.hu === S.hu && H.hole[mySeat] && H.hole[mySeat].length === 2) return H.hole[mySeat];
+  if (myDec.hu === S.hu && myDec.cards) return myDec.cards;
+  return null;
+}
+function inHand(){ return ['preflop','flop','turn','river','showdown'].includes(S.st); }
+function bettingNow(){ return ['preflop','flop','turn','river'].includes(S.st); }
+function myTurnNow(){ return mySeat >= 0 && S.tu === mySeat && !!S.ti && sentTi !== S.ti && bettingNow() && hostAlive(); }
+
+function render(){
+  const ms = S.seats.findIndex(s => s.owner && s.owner === myKey);
+  if (ms !== mySeat){
+    mySeat = ms;
+    if (ms >= 0){ lsSet('bp.last', PEOPLE[ms].id); if (myReq === undefined || myReq === PEOPLE[ms].id) closePicker(); }
+    layout();
+  }
+  if (S.ti !== lastTi){ lastTi = S.ti; tiSeenAt = Date.now(); }
+  const showBtn = !['wait'].includes(S.st) && S.hn > 0;
+
+  S.seats.forEach((s, i) => {
+    const e = E[i];
+    e.seat.classList.toggle('me', i === mySeat);
+    e.seat.classList.toggle('turn', i === S.tu && bettingNow());
+    e.seat.classList.toggle('folded', s.dealt && s.folded);
+    e.seat.classList.toggle('win', s.won > 0);
+    e.ch.textContent = fmt(s.chips);
+    e.bot.hidden = !!s.owner;
+    e.dot.hidden = !s.owner || localMode;
+    e.dot.classList.toggle('off', !!s.owner && !isOnlineKey(s.owner));
+
+    let b = '';
+    if (showBtn && i === S.d) b += '<span class="dbtn" title="Dealer">D</span>';
+    if (showBtn && i === S.sb) b += '<span class="blind">SB</span>';
+    if (showBtn && i === S.bb) b += '<span class="blind bb">BB</span>';
+    if (e.badges._b !== b){ e.badges.innerHTML = b; e.badges._b = b; }
+
+    e.tag.textContent = s.last;
+    e.tag.className = 'tag ' + (s.lastType || '');
+    e.tag.hidden = !s.last;
+    e.won.textContent = s.won > 0 ? '+' + fmt(s.won) : '';
+    e.won.hidden = !(s.won > 0);
+
+    let cards = null, face = false;
+    if (s.dealt){
+      if (i === mySeat){ const mc = myCards(); if (mc){ cards = mc; face = true; } else if (!s.folded) cards = [null, null]; }
+      else if (s.shown){ cards = s.shown; face = true; }
+      else if (!s.folded) cards = [null, null];
+    }
+    const key = (cards ? (face ? 'u' + cards.join(',') : 'b') : '') + (i === mySeat && s.folded ? 'f' : '') + (i === mySeat ? 'm' : '');
+    if (key !== e._hk || e._hu !== S.hu){
+      const fresh = e._hu !== S.hu;
+      const flip = !fresh && e._face === 'b' && face;
+      let h = '';
+      if (cards){
+        cards.forEach((c, k) => {
+          const cls = (fresh ? 'deal' : '') + (flip ? ' flip' : '') + (i === mySeat && s.folded ? ' muck' : '');
+          const delay = fresh ? `style="animation-delay:${(((i - S.sb + N) % N) + k*N)*40}ms"` : '';
+          h += face ? cardHTML(c, cls, delay) : cardHTML(null, cls, delay);
+        });
+      }
+      e.hole.innerHTML = h;
+      e._hk = key; e._hu = S.hu; e._face = cards ? (face ? 'u' : 'b') : '';
+    }
+
+    const timed = i === S.tu && S.tm > 0 && bettingNow();
+    if (timed && e.tmr._ti !== S.ti){
+      const left = Math.max(0, S.tm - (Date.now() - tiSeenAt));
+      e.tmr.innerHTML = `<i style="animation-duration:${left}ms;--from:${(left / S.tm).toFixed(3)}"></i>`;
+      e.tmr._ti = S.ti;
+    } else if (!timed && e.tmr._ti){ e.tmr.innerHTML = ''; e.tmr._ti = null; }
+
+    if (s.bet > 0){ e.bet.hidden = false; e.betAmt.textContent = fmt(s.bet); }
+    else e.bet.hidden = true;
+  });
+
+  const bk = S.hu + '|' + S.bd.join(',');
+  if (bk !== boardEl._k){
+    const prev = boardEl._hu === S.hu ? (boardEl._n || 0) : 0;
+    let h = '';
+    for (let i = 0; i < 5; i++){
+      if (i < S.bd.length){
+        const isNew = i >= prev;
+        h += cardHTML(S.bd[i], isNew ? 'deal' : '', isNew ? `style="animation-delay:${(i - prev)*90}ms"` : '');
+      } else h += '<div class="slot"></div>';
+    }
+    boardEl.innerHTML = h;
+    boardEl._k = bk; boardEl._n = S.bd.length; boardEl._hu = S.hu;
+  }
+  potEl.textContent = fmt(potTotal());
+  statusEl.textContent = S.su;
+  $('#handNo').textContent = `Hand #${Math.max(1, S.hn)}`;
+  renderHeader();
+  renderControls();
+  if (!picker.hidden) renderPicker();
+}
+
+function myHandText(){
+  if (mySeat < 0) return 'Pick a seat';
+  const s = S.seats[mySeat];
+  if (!s.dealt) return 'Waiting for cards';
+  if (s.folded) return 'Folded';
+  const mc = myCards();
+  if (!mc) return 'Dealing…';
+  if (S.bd.length === 0){
+    const [a, b] = mc, ra = a >> 2, rb = b >> 2;
+    if (ra === rb) return `Pocket ${RP[ra]}`;
+    const hi = Math.max(ra, rb), lo = Math.min(ra, rb);
+    return `${RCH[hi]}-${RCH[lo]} ${(a & 3) === (b & 3) ? 'suited' : 'offsuit'}`;
+  }
+  return handName(eval7([...mc, ...S.bd]));
+}
+
+function turnText(){
+  const s = mySeat >= 0 ? S.seats[mySeat] : null;
+  if (!capsReady) return 'Connecting to the table…';
+  if (!s) return "You're watching. Pick a seat to play.";
+  if (!hostAlive()) return 'Waiting for the host to open the table';
+  if (myTurnNow()){
+    const toCall = Math.max(0, S.cb - s.bet);
+    const left = S.tm > 0 ? ` · ${Math.max(0, Math.ceil((S.tm - (Date.now() - tiSeenAt))/1000))}s` : '';
+    return (toCall > 0 ? `Your turn · ${fmt(Math.min(toCall, s.chips))} to call` : 'Your turn · nothing to call') + ` · pot ${fmt(potTotal())}` + left;
+  }
+  if (S.tu === mySeat && sentTi === S.ti && bettingNow()) return 'Sent. Waiting for the table…';
+  if (S.tu >= 0 && bettingNow()) return `Waiting for ${nameOf(S.tu)}…`;
+  return S.su;
+}
+
+function renderControls(){
+  const s = mySeat >= 0 ? S.seats[mySeat] : null;
+  const myTurn = myTurnNow();
+  if (myTurn && setupTi !== S.ti){ setupTi = S.ti; setupControls(); }
+  $('#myHand').textContent = myHandText();
+  const mc = myCards();
+  const mh = mc ? mc.map(c => cardHTML(c, s && s.folded ? 'muck' : '')).join('') : (s && s.dealt && !s.folded ? cardHTML(null) + cardHTML(null) : '<div class="slot"></div><div class="slot"></div>');
+  const myCardsEl = $('#myCards');
+  if (myCardsEl._k !== mh){ myCardsEl.innerHTML = mh; myCardsEl._k = mh; }
+  $('#turnInfo').textContent = turnText();
+  $('#controls').classList.toggle('live', myTurn);
+  if (!myTurn){
+    const toCall = s ? Math.max(0, S.cb - s.bet) : 0;
+    $('#bCall .lbl').textContent = toCall > 0 ? 'Call' : 'Check';
+    $('#bRaise .lbl').textContent = S.cb === 0 ? 'Bet' : 'Raise';
+    $('#raiseBox').classList.remove('off');
+  }
+  const raiseOff = $('#raiseBox').classList.contains('off');
+  $('#bFold').disabled = !myTurn;
+  $('#bCall').disabled = !myTurn;
+  $('#bRaise').disabled = !myTurn || raiseOff;
+  $('#raiseRange').disabled = !myTurn || raiseOff;
+  document.querySelectorAll('.pre').forEach(b => b.disabled = !myTurn || raiseOff);
+  const seated = mySeat >= 0;
+  $('#sayInput').disabled = !seated;
+  $('#sayBtn').disabled = !seated;
+  $('#sayInput').placeholder = seated ? `Talk trash as ${nameOf(mySeat)}` : 'Pick a seat to talk';
+  document.querySelectorAll('.qc').forEach(b => b.disabled = !seated);
+  const mySigs = seated ? SIG.filter(x => x.p === PEOPLE[mySeat].id) : [];
+  const sigT = mySigs.length ? mySigs[0].t : '';
+  if (qSig.dataset.raw !== sigT){ qSig.dataset.raw = sigT; qSig.textContent = censor(sigT); }
+  qSig.hidden = !sigT;
+}
+
+function setupControls(){
+  const s = S.seats[mySeat];
+  const toCall = Math.max(0, S.cb - s.bet);
+  const maxTo = s.bet + s.chips;
+  $('#bCall .lbl').textContent = toCall === 0 ? 'Check' : (toCall >= s.chips ? `Call all-in ${fmt(s.chips)}` : `Call ${fmt(toCall)}`);
+  const canRaise = maxTo > S.cb && s.chips > toCall;
+  $('#raiseBox').classList.toggle('off', !canRaise);
+  const r = $('#raiseRange');
+  if (canRaise){
+    const minTo = Math.min(maxTo, S.cb === 0 ? BB : S.cb + S.mr);
+    r.min = minTo; r.max = maxTo; r.value = minTo;
+  }
+  updRaise();
+}
+function updRaise(){
+  if (mySeat < 0) return;
+  const s = S.seats[mySeat];
+  const v = +$('#raiseRange').value;
+  const maxTo = s.bet + s.chips;
+  $('#bRaise .lbl').textContent = v >= maxTo ? `All-in ${fmt(v)}` : `${S.cb === 0 ? 'Bet' : 'Raise to'} ${fmt(v)}`;
+}
+
+function renderHeader(){
+  const chip = $('#liveChip');
+  let cls = 'wait', text;
+  const humans = S.seats.filter(s => s.owner && isOnlineKey(s.owner)).length;
+  if (localMode){ cls = 'on'; text = 'Solo vs bots'; }
+  else if (!capsReady) text = 'Connecting';
+  else if (!hostAlive()) text = 'Waiting for host';
+  else { cls = 'on'; text = `Live · ${humans} ${humans === 1 ? 'player' : 'players'}${isHost ? ' · hosting' : ''}`; }
+  chip.className = 'conn ' + cls;
+  chip.textContent = text;
+  const ts = $('#tSeat');
+  ts.textContent = mySeat >= 0 ? `You're ${nameOf(mySeat)}` : 'Pick your seat';
+  ts.classList.toggle('seat', mySeat < 0);
+  $('#tSpeed').hidden = !isHost;
+  $('#tReset').hidden = !isHost;
+}
+
+/* ================= seat picker ================= */
+let pickNote = '';
+function openPicker(){ renderPicker(); picker.hidden = false; }
+function closePicker(){ picker.hidden = true; pickNote = ''; }
+function renderPicker(){
+  const frag = document.createDocumentFragment();
+  S.seats.forEach((s, i) => {
+    const p = PEOPLE[i];
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'tile';
+    let st, dis = false;
+    if (s.owner === myKey) st = "That's you";
+    else if (s.owner && isOnlineKey(s.owner)){ st = 'Taken'; dis = true; }
+    else if (s.owner) st = 'Open · player away';
+    else st = 'Open';
+    if (s.owner === myKey || (myReq === p.id && s.owner !== myKey && !dis)) b.classList.add('mine');
+    b.disabled = dis;
+    b.innerHTML = `<div class="av" style="--pc:${p.color}">${p.name[0]}</div><span><b></b><small></small></span>`;
+    b.querySelector('b').textContent = p.name;
+    b.querySelector('small').textContent = `${st} · ${fmt(s.chips)}`;
+    b.addEventListener('click', () => requestSeat(p.id));
+    frag.append(b);
+  });
+  pickGrid.replaceChildren(frag);
+  let note = pickNote;
+  if (myReq && IDX[myReq] !== undefined && S.seats[IDX[myReq]].owner !== myKey){
+    const o = S.seats[IDX[myReq]].owner;
+    if (o && isOnlineKey(o)) note = `${nameOf(IDX[myReq])} is taken. Pick another name.`;
+    else if (capsReady && !hostAlive()) note = 'Waiting for the host to open the table…';
+    else note = `Joining as ${nameOf(IDX[myReq])}…`;
+  }
+  pickMsgEl.textContent = note;
+  $('#pickWatch').textContent = mySeat >= 0 ? 'Leave seat and watch' : 'Just watch';
+}
+function requestSeat(id){
+  myReq = id;
+  if (id) lsSet('bp.last', id);
+  if (!id) closePicker();
+  if (!capsReady){ renderPicker(); return; }
+  if (isHost) hostClaim(myKey, id);
+  setPresence({seat:id});
+  if (!picker.hidden) renderPicker();
+}
+
+/* ================= talk (all devices) ================= */
+let lastShownI = 0;
+const logItems = [];
+function logNode(it){
+  const d = document.createElement('div');
+  if (it.sys){ d.className = 'sys'; d.textContent = it.text; return d; }
+  const p = PEOPLE[IDX[it.pid]];
+  d.className = 'msg';
+  const b = document.createElement('b'); b.style.color = p.color; b.textContent = p.name;
+  const s = document.createElement('span'); s.textContent = censor(it.text);
+  d.append(b, s);
+  return d;
+}
+function pushLog(it){
+  logItems.push(it);
+  logEl.append(logNode(it));
+  if (logItems.length > 150){ logItems.shift(); if (logEl.firstChild) logEl.firstChild.remove(); }
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function showTalk(lines, live){
+  for (const ln of lines){
+    if (!ln || typeof ln.i !== 'number' || ln.i <= lastShownI) continue;
+    lastShownI = ln.i;
+    const text = String(ln.t || '').slice(0, 160);
+    const pid = typeof ln.p === 'string' && IDX[ln.p] !== undefined ? ln.p : '';
+    pushLog(pid ? {pid, text} : {sys:true, text});
+    if (live && pid) showBubble(pid, text);
+  }
+}
+function rerenderTalk(){
+  logEl.innerHTML = '';
+  logItems.forEach(it => logEl.append(logNode(it)));
+  logEl.scrollTop = logEl.scrollHeight;
+  E.forEach(e => { if (e.bubble._raw) e.bubble.textContent = censor(e.bubble._raw); });
+}
+function showBubble(pid, text){
+  const i = IDX[pid], b = E[i].bubble;
+  b._raw = text;
+  b.textContent = censor(text);
+  b.classList.remove('show');
+  void b.offsetWidth;
+  b.classList.add('show');
+  placeBubble(i);
+  clearTimeout(b._t);
+  b._t = setTimeout(() => b.classList.remove('show'), 3600);
+}
+function placeBubble(i){
+  const e = E[i], b = e.bubble, sh = e.seat.offsetHeight, bw = b.offsetWidth, bh = b.offsetHeight;
+  const {x, y} = e.pos;
+  const below = y < G.H/2 - 60;
+  const left = Math.min(Math.max(x, bw/2 + 6), G.W - bw/2 - 6);
+  b.style.left = left + 'px';
+  b.style.top = (below ? y + sh/2 + 12 : y - sh/2 - 12 - bh) + 'px';
+  b.style.setProperty('--tx', Math.max(-(bw/2 - 16), Math.min(bw/2 - 16, x - left)) + 'px');
+  b.classList.toggle('below', below);
+}
+
+/* ================= client: receiving state ================= */
+function applyRemote(o){
+  if (isHost || localMode) return;
+  const n = unpack(o);
+  if (!n) return;
+  if (n.et < S.et || (n.et === S.et && n.v <= S.v)) return;
+  S = n;
+  onStateChanged();
+}
+function onStateChanged(){
+  render();
+  tryDecrypt();
+}
+async function tryDecrypt(){
+  if (isHost || mySeat < 0 || decBusy) return;
+  const s = S.seats[mySeat];
+  if (!s.dealt || !s.enc || s.shown || (myDec.hu === S.hu && myDec.cards)) return;
+  const hu = S.hu, hp = S.hp;
+  const tag = myPkB64 ? myPkB64.slice(-10) : null;
+  const e = (tag && s.enc.find(x => x[0] === tag)) || s.enc.find(x => x[0] === 'plain');
+  if (!e) return;
+  decBusy = true;
+  try {
+    const cards = e[0] === 'plain' ? JSON.parse(e[2]) : (subtle && myKP && hp ? await decFrom(hp, e) : null);
+    if (Array.isArray(cards) && cards.length === 2 && cards.every(validCard) && S.hu === hu){ myDec = {hu, cards}; render(); }
+  } catch (err) {}
+  finally { decBusy = false; }
+}
+
+/* ================= client: acting ================= */
+function humanAct(a){
+  if (!myTurnNow()) return;
+  sentTi = S.ti;
+  if (isHost){
+    if (H && H.pending && H.pending.ti === S.ti) H.pending.resolve(a);
+  } else {
+    setPresence({act:{t:S.ti, type:a.type, to:Math.floor(+a.to || 0)}});
+  }
+  renderControls();
+}
+function humanChat(text){
+  const t = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  if (!t || mySeat < 0) return;
+  if (isHost) hostChat(myKey, t);
+  else setPresence({say:{n:++sayN, t}});
+}
+
+/* ================= host ================= */
+function newH(){
+  return {hole:[], board5:[], hu:'', acted:Array(N).fill(false), fs:Array(N).fill(0), score:Array(N).fill(0), raises:0, actN:0,
+    pending:null, encSig:[], seenSay:{}, lastClaim:{}, offSince:{}, resetPending:false};
+}
+let talk = [], lastTalkI = 0;
+function makeWriter(path){
+  let busy = false, pending = null, last = 0;
+  async function flush(){
+    if (busy || !pending || !db) return;
+    busy = true;
+    const gap = 700 - (Date.now() - last);
+    if (gap > 0) await wait(gap);
+    const d = pending; pending = null;
+    if (isHost && !localMode){
+      try { await db.doc(path).set(d); }
+      catch (e) { if (e && e.code === 'unavailable'){ await wait(600 + Math.random()*600); if (!pending) pending = d; } }
+    }
+    last = Date.now(); busy = false;
+    if (pending) flush();
+  }
+  return d => { pending = d; flush(); };
+}
+const writeState = makeWriter('game/state');
+const writeTalk = makeWriter('game/talk');
+
+function publish(){
+  if (!isHost) return;
+  S.v++;
+  S.hk = myKey;
+  S.hp = myPkB64 || '';
+  render();
+  if (!localMode){
+    const o = pack();
+    if (JSON.stringify(o).length < 3900) emit('state', o);
+    if (db) writeState(o);
+  }
+}
+function talkLine(pid, text){
+  if (!isHost) return;
+  const i = Math.max(lastTalkI + 1, lastShownI + 1, Date.now());
+  lastTalkI = i;
+  const line = {i, p:pid || '', t:String(text).slice(0, 160)};
+  talk.push(line);
+  if (talk.length > 40) talk.shift();
+  showTalk([line], true);
+  if (!localMode){
+    emit('talk', {lines:[line]});
+    if (db) writeTalk({lines:talk});
+  }
+}
+const bq = [];
+let bqBusy = false;
+function say(pid, text, delay = 0, force = false, replies = L.replyAny, rp = .25){
+  if (!isHost || !pid) return;
+  if (!force && bq.length >= 4) return;
+  bq.push({pid, text, delay, replies, rp});
+  pump();
+}
+async function pump(){
+  if (bqBusy) return;
+  bqBusy = true;
+  while (bq.length){
+    const m = bq.shift();
+    if (m.delay) await wait(m.delay);
+    if (!isHost){ bq.length = 0; break; }
+    if (m.pid === 'tolendi' && !TOL.includes(m.text)){ m.text = pick(TOL); m.replies = TOL_R; m.rp = .45; }
+    talkLine(m.pid, m.text);
+    if (m.replies && m.replies.length && chance(m.rp)){
+      const si = IDX[m.pid];
+      const rid = pickSpeaker([si]);
+      bq.unshift({pid:rid, text:fill(pick(m.replies), {a:PEOPLE[si], s:PEOPLE[IDX[rid]]}), delay:300, replies:null, rp:0});
+    }
+    await wait(1400);
+  }
+  bqBusy = false;
+}
+function pickSpeaker(exIdx = []){
+  const pool = PEOPLE.map((p, i) => i).filter(i => !exIdx.includes(i));
+  return PEOPLE[pick(pool)].id;
+}
+function nitiAccuse(){
+  S.na = 1;
+  say('niti', "Vedant bitch stop cheating", 0, true);
+  if (chance(.7)) say('vedant', fill(pick(L.vedantDefend), {a:PEOPLE[IDX.niti]}), 300, true);
+}
+function sigLine(delay = 0, exIdx = []){
+  const it = pick(SIG.filter(x => x.p === '*' || !exIdx.includes(IDX[x.p])));
+  const pid = it.p === '*' ? pickSpeaker(exIdx) : it.p;
+  say(pid, it.t, delay, false, it.r, .55);
+}
+function chatter(pool, sigChance = .3, exIdx = []){
+  if (chance(sigChance)) return sigLine(0, exIdx);
+  const sp = pickSpeaker(exIdx);
+  say(sp, fill(pick(pool), {s:PEOPLE[IDX[sp]], d:PEOPLE[S.d]}));
+}
+function idleLine(){
+  const it = pick(IDLE);
+  const ex = it.about === 'dealer' ? [S.d] : (it.about ? [IDX[it.about]] : []);
+  say(pickSpeaker(ex), it.t);
+}
+
+function hostClaim(k, req){
+  if (!isHost || !k) return false;
+  const cur = S.seats.findIndex(s => s.owner === k);
+  if (req === '' || req === null){
+    if (cur < 0) return false;
+    S.seats[cur].owner = null;
+    talkLine('', `${nameOf(cur)} left the seat · a bot takes over`);
+    publish(); refreshEnc();
+    return true;
+  }
+  if (typeof req !== 'string' || IDX[req] === undefined) return false;
+  const idx = IDX[req];
+  if (idx === cur) return false;
+  const o = S.seats[idx].owner;
+  if (o && o !== k && isOnlineKey(o)) return false;
+  if (cur >= 0) S.seats[cur].owner = null;
+  S.seats[idx].owner = k;
+  delete H.offSince[k];
+  talkLine('', `${nameOf(idx)} sat down`);
+  if (chance(.45)) say(pickSpeaker([idx]), fill(pick(L.join), {n:PEOPLE[idx]}), 700);
+  publish(); refreshEnc();
+  return true;
+}
+function hostChat(k, t){
+  const idx = S.seats.findIndex(s => s.owner === k);
+  if (idx < 0) return;
+  const text = String(t || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  if (!text) return;
+  talkLine(PEOPLE[idx].id, text);
+  const low = text.toLowerCase(), who = PEOPLE[idx];
+  const sig = SIG.find(x => low.includes(x.t.toLowerCase().replace(/[()]/g, '')) || low.includes(x.t.toLowerCase()));
+  if (sig) say(pickSpeaker([idx]), fill(pick(sig.r), {a:who}), 900, false, null);
+  else if (/vedant|cheat/.test(low) && who.id !== 'vedant') say('vedant', fill(pick(L.vedantDefend), {a:who}), 900);
+  else if (/bitch|\bmf\b|\bbc\b|\bmc\b|chut|gaand|bhen|madar|saal|fuck/.test(low)) say(pickSpeaker([idx]), fill(pick(L.chatSwear), {a:who}), 900);
+  else if (chance(.35)) say(pickSpeaker([idx]), fill(pick(L.chatAny), {a:who}), 900);
+}
+function hostScanActs(){
+  if (!isHost || !H || !H.pending || !room) return;
+  const pend = H.pending, owner = S.seats[pend.i].owner;
+  if (!owner) return;
+  for (const p of room.peers()){
+    if (p.kind !== 'viewer' || p.sameTab) continue;
+    const pr = p.presence || {};
+    if (pr.key !== owner) continue;
+    const a = pr.act;
+    if (a && typeof a === 'object' && a.t === pend.ti){ pend.resolve({type:String(a.type), to:Number(a.to)}); return; }
+  }
+}
+function hostProcessPeers(initial){
+  if (!isHost || !H || localMode || !room) return;
+  const now = Date.now();
+  const peers = room.peers().filter(p => p.kind === 'viewer' && !p.sameTab);
+  for (const p of peers){
+    const pr = p.presence || {};
+    const k = validKey(pr.key);
+    if (!k) continue;
+    if (Object.prototype.hasOwnProperty.call(pr, 'seat')){
+      const req = pr.seat;
+      if (initial || H.lastClaim[p.peer] !== req){ H.lastClaim[p.peer] = req; hostClaim(k, req); }
+    }
+    const sy = pr.say;
+    const n = sy && typeof sy === 'object' && typeof sy.n === 'number' ? sy.n : 0;
+    if (initial) H.seenSay[p.peer] = n;
+    else if (n > (H.seenSay[p.peer] || 0)){ H.seenSay[p.peer] = n; hostChat(k, sy.t); }
+  }
+  S.seats.forEach(s => {
+    if (!s.owner) return;
+    if (isOnlineKey(s.owner)) delete H.offSince[s.owner];
+    else if (!H.offSince[s.owner]) H.offSince[s.owner] = now;
+  });
+  hostScanActs();
+  refreshEnc();
+}
+function pksForKey(k){
+  const out = new Set();
+  if (room) for (const p of room.peers()){
+    if (p.kind !== 'viewer' || p.sameTab) continue;
+    const pr = p.presence || {};
+    if (pr.key !== k) continue;
+    if (typeof pr.pk === 'string' && /^[A-Za-z0-9+/]{80,100}={0,2}$/.test(pr.pk)) out.add(pr.pk);
+    else out.add('plain');
+  }
+  return [...out].sort();
+}
+let encBusy = false, encAgain = false;
+async function refreshEnc(){
+  if (!isHost || !H || localMode) return;
+  if (encBusy){ encAgain = true; return; }
+  encBusy = true;
+  try {
+    do {
+      encAgain = false;
+      let changed = false;
+      for (let i = 0; i < N; i++){
+        if (!isHost || !H) return;
+        const s = S.seats[i];
+        const hole = H.hu === S.hu ? H.hole[i] : null;
+        if (!s.owner || !s.dealt || !hole || hole.length !== 2 || s.shown){
+          if (s.enc){ s.enc = null; changed = true; }
+          H.encSig[i] = '';
+          continue;
+        }
+        const pks = pksForKey(s.owner);
+        const sig = S.hu + '|' + s.owner + '|' + pks.join(',');
+        if (H.encSig[i] === sig) continue;
+        const hu = S.hu, entries = [];
+        for (const k of pks){
+          const e = k === 'plain' ? null : await encFor(k, hole);
+          entries.push(e || ['plain', '', JSON.stringify(hole)]);
+        }
+        if (!isHost || !H || S.hu !== hu) break;
+        s.enc = entries.length ? entries : null;
+        H.encSig[i] = sig;
+        changed = true;
+      }
+      if (changed) publish();
+    } while (encAgain && isHost && H);
+  } finally { encBusy = false; }
+}
+function voidHand(msg){
+  if (!inHand()) return false;
+  S.seats.forEach(s => { s.chips += s.total; Object.assign(s, {bet:0, total:0, folded:false, allIn:false, dealt:false, last:'', lastType:'', won:0, shown:null, enc:null, hand:''}); });
+  S.bd = []; S.st = 'wait'; S.tu = -1; S.ti = ''; S.tm = 0; S.cb = 0;
+  S.su = msg;
+  talkLine('', msg);
+  return true;
+}
+
+function botDecide(i){
+  const s = S.seats[i], P = PEOPLE[i].persona;
+  const toCall = Math.max(0, S.cb - s.bet);
+  const pot = potTotal();
+  const maxTo = s.bet + s.chips;
+  const opp = S.seats.filter((q, j) => j !== i && q.dealt && !q.folded).length;
+  const eff = Math.max(1, Math.min(opp, S.st === 'preflop' ? 3 : 4));
+  const eq = equity(H.hole[i], S.bd, eff, S.st === 'preflop' ? 240 : 300);
+  const r = eq * (eff + 1);
+  const R = Math.random();
+  const minTo = Math.min(maxTo, S.cb === 0 ? BB : S.cb + S.mr);
+  const canRaise = maxTo > S.cb && H.raises < 4 && s.chips > toCall;
+  const sized = f => {
+    let to = Math.round((S.cb + (pot + toCall)*f)/10)*10;
+    to = Math.max(to, minTo);
+    if (to >= maxTo*0.8) to = maxTo;
+    return Math.min(to, maxTo);
+  };
+  if (P.shove && canRaise && r > 1.7 && R < 0.1) return {type:'raise', to:maxTo};
+  if (toCall === 0){
+    if (P.slow && r > 2.4 && R < 0.45) return {type:'check'};
+    const strong = r > 1.8 - P.aggr*0.5;
+    if (canRaise && strong && R < 0.5 + P.aggr*0.45) return {type:'raise', to:sized(0.45 + Math.min(0.5, (r-1.5)*0.25))};
+    if (canRaise && R < P.bluff) return {type:'raise', to:sized(0.5)};
+    return {type:'check'};
+  }
+  const odds = toCall/(pot + toCall);
+  if (canRaise && r > 2.3 - P.aggr*0.4 && R < 0.3 + P.aggr*0.45) return {type:'raise', to:sized(0.75)};
+  const commit = toCall/(s.chips + 0.01);
+  if (commit > 0.45 && r < 1.2 + P.tight*0.6) return {type:'fold'};
+  if (eq >= odds*(0.8 + P.tight*0.6)) return {type:'call'};
+  if (S.st === 'preflop' && toCall <= BB && R < 0.75 - P.tight*0.7) return {type:'call'};
+  if (canRaise && commit < 0.25 && R < P.bluff*0.5) return {type:'raise', to:sized(0.7)};
+  return {type:'fold'};
+}
+
+function banterOnAction(i, a, prevBet, potBefore){
+  const s = S.seats[i], P = PEOPLE[i];
+  if (S.st === 'preflop'){ if (a.type === 'fold') H.fs[i]++; else H.fs[i] = 0; }
+  const raised = S.cb > prevBet && s.bet === S.cb;
+  if (P.id === 'vedant' && raised && !S.na) return nitiAccuse();
+  if (s.allIn && a.type !== 'fold' && a.type !== 'check'){
+    if (chance(.8)) say(pickSpeaker([i]), fill(pick(L.allIn), {n:P}));
+    return;
+  }
+  if (a.type === 'call'){
+    if (chance(.3)) say(pickSpeaker([i]), fill(pick(L.call), {n:P}));
+    return;
+  }
+  if (raised){
+    const big = (S.cb - prevBet) >= Math.max(80, potBefore*0.7);
+    if (chance(big ? .55 : (s.owner ? .3 : .2))) say(pickSpeaker([i]), fill(pick(big ? L.bigRaise.concat(L.humanRaise) : L.humanRaise), {n:P}));
+    return;
+  }
+  if (a.type === 'fold' && H.fs[i] >= 3 && chance(.5)){
+    H.fs[i] = 0;
+    say(pickSpeaker([i]), fill(pick(L.foldStreak), {n:P}));
+  }
+}
+function endBanter(w, showdown){
+  if (PEOPLE[w].id === 'vedant'){
+    if (!S.na) return nitiAccuse();
+    if (chance(.85)){
+      const sp = pickSpeaker([w]);
+      say(sp, pick(L.vedantWin), 0, false, null);
+      if (chance(.5)) say('vedant', fill(pick(L.vedantDefend), {a:PEOPLE[IDX[sp]]}), 300);
+    }
+    if (chance(.25)) sigLine(600);
+    return;
+  }
+  const others = S.seats.map((s, i) => i).filter(i => i !== w && !(S.seats[i].won > 0));
+  if (showdown){
+    const losers = others.filter(i => S.seats[i].dealt && !S.seats[i].folded && H.score[i] >= B5).sort((a, b) => S.seats[b].total - S.seats[a].total);
+    if (losers.length && chance(.75)){
+      const l = losers[0];
+      say(PEOPLE[l].id, fill(pick(L.showdownLoss), {s:PEOPLE[l], w:PEOPLE[w], h:handName(H.score[l])}));
+      if (chance(.25)) sigLine(600);
+      return;
+    }
+  }
+  const big = others.map(i => ({i, net:(S.seats[i].won || 0) - S.seats[i].total})).filter(x => x.net <= -60).sort((a, b) => a.net - b.net)[0];
+  if (big && chance(.7)) say(PEOPLE[big.i].id, fill(pick(L.potWin), {w:PEOPLE[w]}));
+  else if (!showdown && chance(.4)) say(pickSpeaker([w]), fill(pick(L.foldWin), {w:PEOPLE[w]}));
+  if (chance(.25)) sigLine(600);
+}
+
+/* ----- the engine: one per hosting session ----- */
+function startEngine(){
+  const EN = {alive:true};
+  const sleep = async ms => { await wait(ms * pace); if (!EN.alive) throw ABORT; };
+  const canAct = i => { const s = S.seats[i]; return s.dealt && !s.folded && !s.allIn; };
+  const liveIdx = () => S.seats.map((s, i) => i).filter(i => S.seats[i].dealt && !S.seats[i].folded);
+  const liveCount = () => liveIdx().length;
+  const actorsCount = () => S.seats.filter((s, i) => canAct(i)).length;
+  const anyHumanSeated = () => S.seats.some(s => s.owner && isOnlineKey(s.owner));
+
+  function put(i, amt){
+    const s = S.seats[i];
+    amt = Math.max(0, Math.min(amt, s.chips));
+    s.chips -= amt; s.bet += amt; s.total += amt;
+    if (s.chips === 0) s.allIn = true;
+  }
+  function setLast(i, t, ty){ S.seats[i].last = t; S.seats[i].lastType = ty; }
+  function streetOver(){
+    const actors = [];
+    for (let i = 0; i < N; i++) if (canAct(i)) actors.push(i);
+    if (!actors.length) return true;
+    if (actors.length === 1 && S.seats[actors[0]].bet >= S.cb) return true;
+    return actors.every(i => H.acted[i] && S.seats[i].bet === S.cb);
+  }
+  function waitHuman(i, ti, ms){
+    return new Promise((resolve, reject) => {
+      const t0 = Date.now();
+      let done = false;
+      const finish = (fn, v) => {
+        if (done) return;
+        done = true;
+        clearInterval(iv);
+        if (H && H.pending && H.pending.ti === ti) H.pending = null;
+        fn(v);
+      };
+      const iv = setInterval(() => {
+        if (!EN.alive) return finish(reject, ABORT);
+        if (!S.seats[i].owner) return finish(resolve, null);
+        if (Date.now() - t0 > ms) return finish(resolve, {type:'timeout'});
+      }, 300);
+      H.pending = {i, ti, resolve:a => finish(resolve, a)};
+      hostScanActs();
+    });
+  }
+  async function getAction(i){
+    const s = S.seats[i];
+    H.actN++;
+    S.ti = `${S.ep}.${S.hn}.${H.actN}`;
+    S.tu = i;
+    if (s.owner){
+      S.tm = isOnlineKey(s.owner) ? TURN_MS : AWAY_MS;
+      publish();
+      const a = await waitHuman(i, S.ti, S.tm);
+      if (!EN.alive) throw ABORT;
+      if (a) return a;
+    }
+    S.tm = 0;
+    publish();
+    await sleep(420 + Math.random()*650);
+    return botDecide(i);
+  }
+  function apply(i, a){
+    const s = S.seats[i], nm = nameOf(i);
+    const prevBet = S.cb, potBefore = potTotal();
+    const maxTo = s.bet + s.chips;
+    const facing = S.cb - s.bet > 0;
+    let timedOut = false;
+    if (!a || typeof a !== 'object') a = {type:facing ? 'fold' : 'check'};
+    if (a.type === 'timeout'){ timedOut = true; a = {type:facing ? 'fold' : 'check'}; }
+    if (!['fold','check','call','raise'].includes(a.type)) a = {type:facing ? 'fold' : 'check'};
+    if (a.type === 'raise'){
+      let to = Math.floor(Number(a.to));
+      if (!isFinite(to)) a = {type:'call'};
+      else {
+        const minTo = Math.min(maxTo, S.cb === 0 ? BB : S.cb + S.mr);
+        if (to < minTo) to = minTo;
+        a = {type:'raise', to:Math.min(to, maxTo)};
+      }
+    }
+    if (a.type === 'raise' && a.to <= S.cb) a = {type:'call'};
+    if (a.type === 'call' && !facing) a = {type:'check'};
+    if (a.type === 'check' && facing) a = {type:'fold'};
+
+    if (a.type === 'fold'){
+      s.folded = true;
+      setLast(i, 'Fold', 'fold');
+      S.su = timedOut ? `${nm} timed out and folds` : `${nm} folds`;
+    } else if (a.type === 'check'){
+      setLast(i, 'Check', 'check');
+      S.su = timedOut ? `${nm} timed out and checks` : `${nm} checks`;
+    } else if (a.type === 'call'){
+      const amt = Math.min(S.cb - s.bet, s.chips);
+      put(i, amt);
+      if (s.allIn){ setLast(i, 'All-in', 'allin'); S.su = `${nm} calls all-in for ${fmt(amt)}`; }
+      else { setLast(i, `Call ${fmt(amt)}`, 'call'); S.su = `${nm} calls ${fmt(amt)}`; }
+    } else {
+      const to = a.to;
+      put(i, to - s.bet);
+      const inc = to - S.cb;
+      if (inc >= S.mr) S.mr = inc;
+      S.cb = to;
+      H.raises++;
+      for (let j = 0; j < N; j++) if (j !== i) H.acted[j] = false;
+      if (s.allIn){ setLast(i, 'All-in', 'allin'); S.su = `${nm} goes all-in for ${fmt(to)}`; }
+      else if (prevBet === 0){ setLast(i, `Bet ${fmt(to)}`, 'raise'); S.su = `${nm} bets ${fmt(to)}`; }
+      else { setLast(i, `Raise ${fmt(to)}`, 'raise'); S.su = `${nm} raises to ${fmt(to)}`; }
+    }
+    H.acted[i] = true;
+    if (timedOut && chance(.8)) say(pickSpeaker([i]), fill(pick(L.timeout), {n:PEOPLE[i]}));
+    banterOnAction(i, a, prevBet, potBefore);
+  }
+  async function bettingRound(start){
+    let i = start, guard = 0;
+    while (!streetOver() && guard++ < 500){
+      if (canAct(i) && (!H.acted[i] || S.seats[i].bet < S.cb)){
+        const a = await getAction(i);
+        apply(i, a);
+        S.tu = -1; S.tm = 0;
+        publish();
+        if (liveCount() === 1) return;
+        await sleep(300);
+      }
+      i = next(i);
+    }
+    S.tu = -1;
+  }
+  function newStreet(st){
+    S.st = st;
+    S.seats.forEach(s => { s.bet = 0; if (s.dealt && !s.folded && !s.allIn){ s.last = ''; s.lastType = ''; } });
+    H.acted = Array(N).fill(false);
+    S.cb = 0; S.mr = BB; H.raises = 0;
+  }
+  function revealIfRunout(){
+    if (liveCount() >= 2 && actorsCount() < 2) liveIdx().forEach(i => { S.seats[i].shown = H.hole[i]; S.seats[i].enc = null; });
+  }
+  function finishUncontested(){
+    const w = liveIdx()[0];
+    const pot = potTotal();
+    S.seats[w].chips += pot;
+    S.seats[w].won = pot;
+    S.seats.forEach(s => s.bet = 0);
+    S.tu = -1; S.tm = 0; S.st = 'done';
+    S.su = `${nameOf(w)} wins ${fmt(pot)}. Everyone else folded.`;
+    talkLine('', `${nameOf(w)} wins ${fmt(pot)} uncontested`);
+    publish();
+    endBanter(w, false);
+  }
+  function awardPots(live){
+    const levels = [...new Set(S.seats.filter(s => s.total > 0).map(s => s.total))].sort((a, b) => a - b);
+    let prev = 0;
+    for (const lv of levels){
+      let amt = 0;
+      const contributors = S.seats.map((s, i) => i).filter(i => S.seats[i].total > prev);
+      S.seats.forEach(s => { amt += Math.max(0, Math.min(s.total, lv) - prev); });
+      if (contributors.length === 1){ S.seats[contributors[0]].chips += amt; prev = lv; continue; }
+      let elig = live.filter(i => S.seats[i].total >= lv);
+      if (!elig.length) elig = live;
+      const best = Math.max(...elig.map(i => H.score[i]));
+      const ws = elig.filter(i => H.score[i] === best).sort((a, b) => ((a - S.d + N) % N) - ((b - S.d + N) % N));
+      const share = Math.floor(amt / ws.length);
+      let rem = amt - share*ws.length;
+      ws.forEach(w => { const x = share + (rem > 0 ? 1 : 0); if (rem > 0) rem--; S.seats[w].won += x; S.seats[w].chips += x; });
+      prev = lv;
+    }
+  }
+  async function showdown(){
+    S.tu = -1; S.tm = 0; S.st = 'showdown';
+    S.bd = H.board5.slice();
+    const live = liveIdx();
+    live.forEach(i => { S.seats[i].shown = H.hole[i]; S.seats[i].enc = null; H.score[i] = eval7([...H.hole[i], ...H.board5]); });
+    S.seats.forEach(s => s.bet = 0);
+    S.su = 'Showdown';
+    publish();
+    await sleep(800);
+    awardPots(live);
+    const best = Math.max(...live.map(i => H.score[i]));
+    live.forEach(i => { S.seats[i].hand = handName(H.score[i]); S.seats[i].last = S.seats[i].hand; S.seats[i].lastType = 'hand' + (H.score[i] === best ? ' best' : ''); });
+    const ws = S.seats.map((s, i) => i).filter(i => S.seats[i].won > 0).sort((a, b) => S.seats[b].won - S.seats[a].won);
+    if (ws.length === 1){
+      const w = ws[0];
+      S.su = `${nameOf(w)} wins ${fmt(S.seats[w].won)} with ${handName(H.score[w])}`;
+      talkLine('', `${nameOf(w)} wins ${fmt(S.seats[w].won)} · ${handName(H.score[w])}`);
+    } else {
+      S.su = 'Split pot · ' + ws.map(w => `${nameOf(w)} ${fmt(S.seats[w].won)}`).join(', ');
+      talkLine('', S.su);
+    }
+    S.st = 'done';
+    publish();
+    if (ws.length) endBanter(ws[0], true);
+  }
+  function releaseAway(){
+    const now = Date.now();
+    S.seats.forEach((s, i) => {
+      if (s.owner && !isOnlineKey(s.owner) && H.offSince[s.owner] && now - H.offSince[s.owner] > RELEASE_MS){
+        s.owner = null;
+        talkLine('', `${nameOf(i)} disconnected · a bot takes over`);
+      }
+    });
+  }
+  async function playHand(){
+    releaseAway();
+    S.hn++;
+    S.hu = `${S.ep}.${S.hn}`;
+    let rebuyNoted = false;
+    S.seats.forEach((s, i) => {
+      if (s.chips <= 0){
+        s.chips = START;
+        s.rb = (s.rb || 0) + 1;
+        talkLine('', `${nameOf(i)} rebuys for ${fmt(START)}`);
+        if (!rebuyNoted && chance(.8)){ rebuyNoted = true; say(pickSpeaker([i]), fill(pick(L.rebuy), {n:PEOPLE[i]})); }
+      }
+    });
+    S.seats.forEach(s => Object.assign(s, {bet:0, total:0, folded:false, allIn:false, dealt:true, last:'', lastType:'', won:0, shown:null, enc:null, hand:''}));
+    H.acted = Array(N).fill(false); H.score = Array(N).fill(0); H.raises = 0; H.encSig = [];
+    const deck = Array.from({length:52}, (_, i) => i);
+    for (let i = deck.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+    S.d = next(S.d); S.sb = next(S.d); S.bb = next(S.sb);
+    S.st = 'preflop'; S.cb = 0; S.mr = BB; S.tu = -1; S.ti = ''; S.tm = 0; S.bd = [];
+    H.hole = Array.from({length:N}, () => []);
+    for (let r = 0; r < 2; r++) for (let k = 0; k < N; k++) H.hole[(S.sb + k) % N].push(deck.pop());
+    H.board5 = deck.splice(-5, 5);
+    H.hu = S.hu;
+    talkLine('', `Hand #${S.hn} · ${nameOf(S.d)} deals`);
+    S.su = `${nameOf(S.d)} deals · blinds 10/20`;
+    put(S.sb, SB); put(S.bb, BB); S.cb = BB;
+    publish();
+    await refreshEnc();
+    await sleep(1100);
+    if (chance(.65)){ if (S.hn > 1 && chance(.3)) idleLine(); else chatter(L.deal, .3); }
+
+    await bettingRound(next(S.bb));
+    if (liveCount() === 1) return finishUncontested();
+    for (const st of ['flop','turn','river']){
+      newStreet(st);
+      revealIfRunout();
+      S.bd = H.board5.slice(0, st === 'flop' ? 3 : st === 'turn' ? 4 : 5);
+      S.su = st === 'flop' ? 'The flop' : st === 'turn' ? 'The turn' : 'The river';
+      publish();
+      if (chance({flop:.6, turn:.35, river:.45}[st])) chatter(L[st], .25);
+      await sleep(800);
+      if (actorsCount() >= 2){
+        await bettingRound(next(S.d));
+        if (liveCount() === 1) return finishUncontested();
+      } else await sleep(700);
+    }
+    return showdown();
+  }
+  async function loop(){
+    for (;;){
+      if (!EN.alive) return;
+      if (H.resetPending){
+        H.resetPending = false;
+        S.seats.forEach(s => { s.chips = START; s.rb = 0; });
+        talkLine('', 'Chips reset. Everyone is back to 1,000');
+        publish();
+      }
+      if (!anyHumanSeated()){
+        if (S.st !== 'wait'){ S.st = 'wait'; S.tu = -1; S.tm = 0; S.ti = ''; S.su = 'Waiting for players to pick a seat'; publish(); }
+        await sleep(700);
+        continue;
+      }
+      await playHand();
+      await sleep(3200);
+    }
+  }
+  function run(){
+    loop().catch(e => {
+      if (e === ABORT || !EN.alive) return;
+      console.error(e);
+      if (voidHand('That hand hit a glitch, so it was cancelled and bets returned')) publish();
+      setTimeout(() => { if (EN.alive) run(); }, 2000);
+    });
+  }
+  run();
+  return EN;
+}
+
+async function becomeHost(){
+  if (isHost) return;
+  isHost = true;
+  H = newH();
+  let base = S.et ? S : null;
+  if (db){
+    try { const snap = await db.doc('game/state').get(); if (snap.exists){ const u = unpack(snap.data()); if (u && (!base || u.et > base.et || (u.et === base.et && u.v > base.v))) base = u; } } catch (e) {}
+    try {
+      const t = await db.doc('game/talk').get();
+      if (t.exists && Array.isArray(t.data().lines)){
+        talk = t.data().lines.filter(l => l && typeof l.i === 'number').slice(-40);
+        showTalk(talk, false);
+      }
+    } catch (e) {}
+  }
+  if (!isHost) return;
+  lastTalkI = Math.max(lastShownI, ...talk.map(l => l.i), 0);
+  S = base || freshState();
+  S.seats.forEach(s => { s.enc = null; });
+  const voided = voidHand('The host reconnected, so the last hand was cancelled and bets returned');
+  if (!voided && S.st !== 'done') { S.st = 'wait'; S.tu = -1; S.ti = ''; S.tm = 0; }
+  S.ep = randId(); S.et = Math.max(Date.now(), (base ? base.et : 0) + 1);
+  setPresence({host:true});
+  hostProcessPeers(true);
+  if (myReq !== undefined) hostClaim(myKey, myReq);
+  publish();
+  engine = startEngine();
+}
+function demote(){
+  if (!isHost) return;
+  isHost = false;
+  if (engine) engine.alive = false;
+  engine = null; H = null;
+  bq.length = 0;
+  setPresence({host:false});
+  render();
+}
+function goLocal(){
+  localMode = true; capsReady = true; isHost = true;
+  H = newH();
+  S = freshState();
+  S.ep = randId(); S.et = Date.now();
+  $('#pickSub').textContent = 'Pick your name to play that seat. Live multiplayer is not available here, so every other seat is a bot.';
+  if (myReq !== undefined) hostClaim(myKey, myReq);
+  publish();
+  engine = startEngine();
+}
+
+let electing = false;
+async function electionTick(){
+  if (!canHost || localMode || electing) return;
+  electing = true;
+  try {
+    if (db){
+      try {
+        const r = await db.doc('game/host').acquire({holder:tabId, ttlMs:12000});
+        if (r && r.acquired){ if (!isHost) await becomeHost(); }
+        else if (isHost) demote();
+      } catch (e) {
+        const code = e && e.code;
+        if (['invalid_argument','not_granted','capability_disabled','capability_removed','revoked'].includes(code)){ canHost = false; setPresence({cand:false}); demote(); }
+      }
+    } else if (room){
+      const ps = room.peers().filter(p => p.kind === 'viewer' && p.presence && p.presence.cand === true);
+      const me = room.peers().find(p => p.isMe && p.sameTab);
+      const first = ps.map(p => p.peer).sort()[0];
+      if (me && first === me.peer){ if (!isHost) await becomeHost(); }
+      else if (isHost && first) demote();
+    }
+  } finally { electing = false; }
+}
+
+/* ================= boot ================= */
+async function boot(){
+  const C = window.claude;
+  if (!C || typeof C.use !== 'function') return goLocal();
+  let r;
+  try { r = await Promise.all([C.use('db'), C.use('room'), C.use('user')]); } catch (e) { r = [null, null, null]; }
+  db = r[0] || null; room = r[1] || null; user = r[2] || null;
+  if (!room) return goLocal();
+  await keysReady;
+  let cw = null, canEdit = false;
+  if (user){
+    try { const id = await user.id(); if (id) myKey = id; } catch (e) {}
+    try { isOwner = await user.isOwner(); } catch (e) {}
+    try { canEdit = await user.canEdit(); } catch (e) {}
+    try { cw = await user.can('data.write'); } catch (e) {}
+  }
+  canHost = db ? (user ? (isOwner || canEdit || cw !== false) : true) : isOwner;
+
+  room.onPeers(ch => {
+    const ps = ch.peers.filter(p => p.kind === 'viewer');
+    peerKeys = new Set(ps.map(p => validKey((p.presence || {}).key)).filter(Boolean));
+    hostOnline = ps.some(p => !p.sameTab && p.presence && p.presence.host === true);
+    if (isHost){
+      if (ch.joined.some(p => !p.isMe)){ const o = pack(); if (JSON.stringify(o).length < 3900) emit('state', o); emit('talk', {lines:talk.slice(-15), sync:1}); }
+      hostProcessPeers(false);
+    }
+    render();
+  }, () => {});
+  room.onConnection(c => {
+    if (c && isHost){ const o = pack(); if (JSON.stringify(o).length < 3900) emit('state', o); emit('talk', {lines:talk.slice(-15), sync:1}); }
+    renderHeader();
+  }, () => {});
+  room.on('state', m => {
+    if (m.sameTab) return;
+    if (isHost){ const n = unpack(m.data); if (n && n.et > S.et) demote(); else return; }
+    applyRemote(m.data);
+  }, () => {});
+  room.on('talk', m => {
+    if (m.sameTab) return;
+    const d = m.data && typeof m.data === 'object' ? m.data : {};
+    showTalk(Array.isArray(d.lines) ? d.lines.slice(-40) : [], !d.sync);
+  }, () => {});
+  if (db){
+    try { db.doc('game/state').onSnapshot(snap => { if (snap.exists) applyRemote(snap.data()); }, () => {}); } catch (e) {}
+    try { db.doc('game/talk').onSnapshot(snap => { if (snap.exists){ const d = snap.data(); showTalk(Array.isArray(d.lines) ? d.lines : [], false); } }, () => {}); } catch (e) {}
+  }
+  setPresence({key:myKey, pk:myPkB64 || null, cand:canHost});
+  capsReady = true;
+  if (myReq !== undefined) requestSeat(myReq);
+  render();
+  electionTick();
+  setInterval(electionTick, 4000);
+}
+
+/* ================= wiring ================= */
+$('#bFold').addEventListener('click', () => humanAct({type:'fold'}));
+$('#bCall').addEventListener('click', () => {
+  if (mySeat < 0) return;
+  const s = S.seats[mySeat];
+  humanAct({type:S.cb - s.bet > 0 ? 'call' : 'check'});
+});
+$('#bRaise').addEventListener('click', () => humanAct({type:'raise', to:+$('#raiseRange').value}));
+$('#raiseRange').addEventListener('input', updRaise);
+document.querySelectorAll('.pre').forEach(b => b.addEventListener('click', () => {
+  if (mySeat < 0) return;
+  const s = S.seats[mySeat], r = $('#raiseRange');
+  const toCall = Math.max(0, S.cb - s.bet), pot = potTotal();
+  const min = +r.min, max = +r.max, k = b.dataset.p;
+  let v;
+  if (k === 'min') v = min;
+  else if (k === 'all') v = max;
+  else v = Math.round((S.cb + (pot + toCall)*(k === 'half' ? .5 : 1))/10)*10;
+  r.value = Math.max(min, Math.min(max, v));
+  updRaise();
+}));
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input[type="text"], textarea') || !picker.hidden) return;
+  if (!myTurnNow() || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === 'f') $('#bFold').click();
+  else if (k === 'c') $('#bCall').click();
+  else if (k === 'r' && !$('#bRaise').disabled) $('#bRaise').click();
+});
+const quickEl = $('#quick');
+const qSig = document.createElement('button');
+qSig.type = 'button'; qSig.className = 'qc'; qSig.hidden = true; qSig.dataset.raw = '';
+qSig.addEventListener('click', () => humanChat(qSig.dataset.raw));
+quickEl.append(qSig);
+QUICK.forEach(t => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'qc'; b.dataset.raw = t; b.textContent = censor(t);
+  b.addEventListener('click', () => humanChat(t));
+  quickEl.append(b);
+});
+$('#sayForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const inp = $('#sayInput');
+  const t = inp.value.trim();
+  if (!t) return;
+  inp.value = '';
+  humanChat(t);
+});
+$('#tSeat').addEventListener('click', openPicker);
+$('#pickWatch').addEventListener('click', () => requestSeat(''));
+picker.addEventListener('click', e => { if (e.target === picker && (mySeat >= 0 || myReq === '')) closePicker(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !picker.hidden && (mySeat >= 0 || myReq === '')) closePicker(); });
+
+function syncToggles(){
+  const tg = $('#tGaali');
+  tg.setAttribute('aria-pressed', String(gaali));
+  tg.textContent = `Gaali mode: ${gaali ? 'On' : 'Off'}`;
+  $('#talkMode').textContent = gaali ? 'Uncensored' : 'Censored';
+  const ts = $('#tSpeed');
+  ts.setAttribute('aria-pressed', String(pace < 1));
+  ts.textContent = `Speed: ${pace < 1 ? '2x' : '1x'}`;
+  quickEl.querySelectorAll('.qc').forEach(b => b.textContent = censor(b.dataset.raw));
+}
+$('#tGaali').addEventListener('click', () => { gaali = !gaali; lsSet('bp.gaali', gaali ? '1' : '0'); syncToggles(); rerenderTalk(); });
+$('#tSpeed').addEventListener('click', () => { pace = pace < 1 ? 1 : 0.5; syncToggles(); });
+let resetArm = null;
+$('#tReset').addEventListener('click', () => {
+  const b = $('#tReset');
+  if (!resetArm){
+    b.textContent = 'Tap again to reset';
+    b.classList.add('danger');
+    resetArm = setTimeout(() => { resetArm = null; b.textContent = 'Reset chips'; b.classList.remove('danger'); }, 3000);
+    return;
+  }
+  clearTimeout(resetArm); resetArm = null;
+  b.textContent = 'Reset chips'; b.classList.remove('danger');
+  if (isHost && H) H.resetPending = true;
+});
+
+if ('ResizeObserver' in window) new ResizeObserver(() => layout()).observe(wrap);
+window.addEventListener('resize', layout);
+setInterval(() => { if (myTurnNow()) $('#turnInfo').textContent = turnText(); }, 500);
+
+if (lsGet('bp.gaali') === '0') gaali = false;
+syncToggles();
+layout();
+render();
+openPicker();
+const last = lsGet('bp.last');
+if (last && IDX[last] !== undefined){ pickNote = `Last time you played as ${nameOf(IDX[last])}.`; renderPicker(); }
+boot();
+})();
+</script>
+</body>
+</html>
