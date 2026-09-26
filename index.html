@@ -452,13 +452,6 @@ const L = {
     "River pe hi toh khel hota hai",
     "Ab dekhte hain kiski maa ki chut hoti hai",
   ],
-  call:[
-    "{n} call hi {n:karega/karegi}, fold kabhi nahi",
-    "Calling station {n}",
-    "{n} ne call kiya, matlab kuch nahi hai paas mein",
-    "Sirf call? Darr {n:gaya/gayi} {n}?",
-    "{n} ka call dekh ke hi pata chal gaya",
-  ],
   replyAny:[
     "Hahaha BC",
     "Sahi bola {a}",
@@ -1402,10 +1395,7 @@ function banterOnAction(i, a, prevBet, potBefore){
     if (chance(.8)) say(pickSpeaker([i]), fill(pick(L.allIn), {n:P}));
     return;
   }
-  if (a.type === 'call'){
-    if (chance(.3)) say(pickSpeaker([i]), fill(pick(L.call), {n:P}));
-    return;
-  }
+  if (a.type === 'call') return;
   if (raised){
     const big = (S.cb - prevBet) >= Math.max(80, potBefore*0.7);
     if (chance(big ? .55 : (s.owner ? .3 : .2))) say(pickSpeaker([i]), fill(pick(big ? L.bigRaise.concat(L.humanRaise) : L.humanRaise), {n:P}));
