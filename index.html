@@ -141,6 +141,9 @@ h1 span{color:var(--gold)}
 .stage[data-mode="port"] .bet{font-size:15px}
 .chip{position:relative;display:inline-block;width:17px;height:17px;border-radius:50%;background:repeating-conic-gradient(var(--gold) 0 30deg,#F7F4EC 30deg 45deg);box-shadow:0 1px 2px rgba(0,0,0,.5)}
 .chip::after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--gold)}
+.chip.fchip{position:absolute;margin:-8.5px 0 0 -8.5px;will-change:transform,opacity}
+.seat.gain .plate{animation:gain .45s ease-out}
+@keyframes gain{40%{transform:scale(1.08)}}
 
 .bubble{position:absolute;translate:-50% 0;max-width:230px;width:max-content;padding:8px 13px 9px;background:var(--paper);color:#1B1508;font:700 17px/1.2 var(--hand);border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,.45);opacity:0;visibility:hidden;text-align:center;transition:opacity .3s,visibility .3s}
 .bubble.show{opacity:1;visibility:visible;animation:pop .28s cubic-bezier(.3,1.6,.5,1) both}
@@ -217,7 +220,7 @@ kbd{font:700 10px var(--body);padding:1px 5px;border-radius:4px;background:rgba(
 #pickMsg{color:var(--gold);font-weight:700;font-size:13px;min-height:18px}
 
 @media (prefers-reduced-motion:reduce){
-  .card.deal,.card.flip,.bubble.show,.won{animation:none}
+  .card.deal,.card.flip,.bubble.show,.won,.seat.gain .plate{animation:none}
   .bubble,.plate{transition:none}
   .tmr i{animation:none}
 }
@@ -251,6 +254,7 @@ kbd{font:700 10px var(--body);padding:1px 5px;border-radius:4px;background:rgba(
           </div>
           <div class="layer" id="betsLayer"></div>
           <div class="layer" id="seatsLayer"></div>
+          <div class="layer" id="fxLayer"></div>
           <div class="layer" id="bubbleLayer"></div>
         </div>
       </div>
@@ -767,6 +771,71 @@ function layout(){
   });
 }
 
+/* ================= pot → winner chip flights ================= */
+// When a hand is settled every browser sees won > 0 in the shared state, so each one
+// plays the same flight locally. Until a winner's chips land, their stack, badge and
+// glow keep showing the pre-win values and the pot shows what is still in the air.
+const fxLayer = $('#fxLayer');
+const reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+const fly = {hu:null, seen:new Set(), pending:new Array(N).fill(0)};
+function startWinFlights(){
+  if (fly.hu !== S.hu){
+    const firstLook = !fly.hu;   // null before the first render, '' while the page still holds its blank starting state
+    fly.hu = S.hu; fly.seen.clear(); fly.pending.fill(0);
+    fxLayer.textContent = '';
+    // A pot that was already settled before this page loaded doesn't fly again.
+    if (firstLook && S.st === 'done') S.seats.forEach((s, i) => { if (s.won > 0) fly.seen.add(i); });
+  }
+  if (S.st !== 'done') return;
+  S.seats.forEach((s, i) => {
+    if (!(s.won > 0) || fly.seen.has(i)) return;
+    fly.seen.add(i);
+    if (document.hidden || (reduceMotion && reduceMotion.matches) || !fxLayer.animate) return;
+    fly.pending[i] = s.won;
+    flyChips(i, s.won, S.hu);
+  });
+}
+function potCenter(){
+  const sr = stage.getBoundingClientRect(), pr = potEl.getBoundingClientRect();
+  const k = sr.width / G.W || 1;
+  return {x:(pr.left + pr.width/2 - sr.left)/k, y:(pr.top + pr.height/2 - sr.top)/k};
+}
+function flyChips(i, amt, hu){
+  const from = potCenter(), to = E[i].pos;
+  const dx = to.x - from.x, dy = to.y - from.y, dist = Math.hypot(dx, dy) || 1;
+  // Bend the path into an arc that bows upward, so the chips read as tossed across the felt.
+  let px = -dy/dist, py = dx/dist;
+  if (py > 0){ px = -px; py = -py; }
+  const lift = Math.min(70, dist*0.28), cx = dx/2 + px*lift, cy = dy/2 + py*lift;
+  const n = Math.max(4, Math.min(10, Math.round(Math.log2(Math.max(amt, 20)/10)) + 2));
+  let left = n;
+  for (let k = 0; k < n; k++){
+    const c = document.createElement('i');
+    c.className = 'chip fchip';
+    c.style.left = from.x + 'px';
+    c.style.top = from.y + 'px';
+    fxLayer.append(c);
+    const jx = (Math.random() - .5)*16, jy = (Math.random() - .5)*10;
+    const frames = [];
+    for (let t = 0; t <= 1.0001; t += 1/12){
+      const u = 1 - t;
+      const x = 2*u*t*cx + t*t*dx + jx*u, y = 2*u*t*cy + t*t*dy + jy*u;
+      const sc = 1 + 0.6*t*u - 0.15*t*t;
+      frames.push({transform:`translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${sc.toFixed(3)})`, opacity:t < 0.08 ? t/0.08 : 1, offset:Math.min(1, t)});
+    }
+    const a = c.animate(frames, {duration:720, delay:k*75, easing:'cubic-bezier(.45,.05,.35,1)', fill:'both'});
+    a.onfinish = a.oncancel = () => {
+      c.remove();
+      if (--left || fly.hu !== hu) return;
+      fly.pending[i] = 0;
+      const seat = E[i].seat;
+      seat.classList.remove('gain'); void seat.offsetWidth; seat.classList.add('gain');
+      setTimeout(() => seat.classList.remove('gain'), 500);
+      render();
+    };
+  }
+}
+
 /* ================= rendering ================= */
 function myCards(){
   if (mySeat < 0) return null;
@@ -789,6 +858,7 @@ function render(){
     layout();
   }
   if (S.ti !== lastTi){ lastTi = S.ti; tiSeenAt = Date.now(); }
+  startWinFlights();
   const showBtn = !['wait'].includes(S.st) && S.hn > 0;
 
   S.seats.forEach((s, i) => {
@@ -796,8 +866,9 @@ function render(){
     e.seat.classList.toggle('me', i === mySeat);
     e.seat.classList.toggle('turn', i === S.tu && bettingNow());
     e.seat.classList.toggle('folded', s.dealt && s.folded);
-    e.seat.classList.toggle('win', s.won > 0);
-    e.ch.textContent = fmt(s.chips);
+    const landed = !fly.pending[i];
+    e.seat.classList.toggle('win', s.won > 0 && landed);
+    e.ch.textContent = fmt(s.chips - fly.pending[i]);
     e.bot.hidden = !!s.owner;
     e.dot.hidden = !s.owner || localMode;
     e.dot.classList.toggle('off', !!s.owner && !isOnlineKey(s.owner));
@@ -812,7 +883,7 @@ function render(){
     e.tag.className = 'tag ' + (s.lastType || '');
     e.tag.hidden = !s.last;
     e.won.textContent = s.won > 0 ? '+' + fmt(s.won) : '';
-    e.won.hidden = !(s.won > 0);
+    e.won.hidden = !(s.won > 0 && landed);
 
     let cards = null, face = false;
     if (s.dealt){
@@ -860,7 +931,8 @@ function render(){
     boardEl.innerHTML = h;
     boardEl._k = bk; boardEl._n = S.bd.length; boardEl._hu = S.hu;
   }
-  potEl.textContent = fmt(potTotal());
+  const settled = S.st === 'done' && S.seats.some(s => s.won > 0);
+  potEl.textContent = fmt(settled ? fly.pending.reduce((a, b) => a + b, 0) : potTotal());
   statusEl.textContent = S.su;
   $('#handNo').textContent = `Hand #${Math.max(1, S.hn)}`;
   renderHeader();
