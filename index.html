@@ -8,7 +8,7 @@
 <title>Berkeley Poker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&family=Kalam:wght@400;700&family=Manrope:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800;900&family=Nunito:wght@600;700;800&family=Manrope:wght@500;600;700;800&display=swap">
 <style>
 :root{
   color-scheme: dark;
@@ -27,7 +27,7 @@
   --ok:#34D399;
   --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
   --body:"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --hand:"Kalam","Comic Sans MS","Chalkboard SE",cursive;
+  --hand:"Nunito","Segoe UI",system-ui,-apple-system,sans-serif;
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -147,11 +147,11 @@ h1 span{color:var(--gold)}
 .seat.gain .plate{animation:gain .45s ease-out}
 @keyframes gain{40%{transform:scale(1.08)}}
 
-.bubble{position:absolute;translate:-50% 0;max-width:230px;width:max-content;padding:8px 13px 9px;background:var(--paper);color:#1B1508;font:700 17px/1.2 var(--hand);border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,.45);opacity:0;visibility:hidden;text-align:center;transition:opacity .3s,visibility .3s}
+.bubble{position:absolute;translate:-50% 0;max-width:230px;width:max-content;padding:8px 13px 9px;background:var(--paper);color:#1B1508;font:700 15px/1.3 var(--hand);border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,.45);opacity:0;visibility:hidden;text-align:center;transition:opacity .3s,visibility .3s}
 .bubble.show{opacity:1;visibility:visible;animation:pop .28s cubic-bezier(.3,1.6,.5,1) both}
 .bubble::after{content:"";position:absolute;left:calc(50% + var(--tx,0px));bottom:-7px;translate:-50% 0;border:8px solid transparent;border-top-color:var(--paper);border-bottom:0}
 .bubble.below::after{bottom:auto;top:-7px;border-top:0;border-bottom:8px solid var(--paper)}
-.stage[data-mode="port"] .bubble{font-size:20px;max-width:210px}
+.stage[data-mode="port"] .bubble{font-size:17px;max-width:210px}
 @keyframes pop{from{scale:.6;opacity:0}}
 
 /* ---------- controls ---------- */
@@ -163,6 +163,10 @@ h1 span{color:var(--gold)}
 .myCards .card,.myCards .slot{--cw:44px;--ch:62px}
 .cap{font:800 11px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 #myHand{font:800 18px/1.2 var(--body);margin-top:3px}
+.myScore{margin-top:5px;font:700 13px var(--body);color:var(--muted);font-variant-numeric:tabular-nums;cursor:pointer}
+.myScore b{font-weight:800}
+.myScore b.up{color:var(--ok)}
+.myScore b.down{color:#FF8A9A}
 .turnInfo{font:700 13px var(--body);color:var(--muted);margin-bottom:9px;min-height:18px;font-variant-numeric:tabular-nums}
 .controls.live .turnInfo{color:var(--gold)}
 .acts{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:10px;align-items:end}
@@ -192,11 +196,11 @@ kbd{font:700 10px var(--body);padding:1px 5px;border-radius:4px;background:rgba(
 .talkHead span{font-size:12px;color:var(--muted);font-weight:600}
 .log{overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:9px;height:clamp(240px,50vh,540px)}
 @media (max-width:1099px){.log{height:260px}}
-.msg{display:flex;gap:10px;align-items:baseline;font:400 17px/1.25 var(--hand)}
+.msg{display:flex;gap:10px;align-items:baseline;font:600 15px/1.4 var(--hand)}
 .msg b{font:800 12px var(--body);flex:none;min-width:60px}
 .sys{font:700 11px var(--body);color:var(--muted);letter-spacing:.06em;text-transform:uppercase;padding-top:6px;border-top:1px dashed rgba(139,160,184,.22)}
 .quick{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px 0;border-top:1px solid var(--line)}
-.qc{height:30px;padding:0 11px;border-radius:99px;background:#13263D;border:1px solid var(--line);font:700 15px var(--hand);cursor:pointer}
+.qc{height:30px;padding:0 11px;border-radius:99px;background:#13263D;border:1px solid var(--line);font:700 13px var(--hand);cursor:pointer}
 .qc:hover:not(:disabled){border-color:var(--gold)}
 .qc:disabled{opacity:.45;cursor:not-allowed}
 .say{display:flex;gap:8px;padding:10px 14px 14px}
@@ -244,6 +248,8 @@ kbd{font:700 10px var(--body);padding:1px 5px;border-radius:4px;background:rgba(
 .sitBtn:hover:not(:disabled){border-color:var(--gold)}
 .sitBtn.in{border-color:var(--ok);color:var(--ok)}
 .sitBtn:disabled{opacity:.45;cursor:not-allowed}
+.bulk{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.bulk .btn{flex:1 1 180px}
 .boardNote{margin:14px 0 0;color:var(--muted);font-size:12px;font-weight:600;line-height:1.5}
 @media (max-width:520px){.board-tbl .rb{display:none}.board-tbl td,.board-tbl th{padding-left:5px;padding-right:5px}}
 .hr{list-style:none;margin:0;padding:0;display:grid;gap:10px}
@@ -302,7 +308,7 @@ kbd{font:700 10px var(--body);padding:1px 5px;border-radius:4px;background:rgba(
       <div class="controls" id="controls">
         <div class="myhand">
           <div class="myCards" id="myCards"></div>
-          <div><div class="cap">Your hand</div><div id="myHand">Pick a seat</div></div>
+          <div><div class="cap">Your hand</div><div id="myHand">Pick a seat</div><div class="myScore" id="myScore" title="Open the scoreboard" hidden></div></div>
         </div>
         <div>
           <div class="turnInfo" id="turnInfo"></div>
@@ -341,7 +347,7 @@ kbd{font:700 10px var(--body);padding:1px 5px;border-radius:4px;background:rgba(
 <div class="picker" id="picker">
   <div class="pickCard" role="dialog" aria-modal="true" aria-labelledby="pickTitle">
     <h2 id="pickTitle">Who are you?</h2>
-    <p class="pickSub" id="pickSub">Pick your name to take that seat. Seats nobody picks are played by bots, and a bot takes over if you leave.</p>
+    <p class="pickSub" id="pickSub">Pick your name to take that seat. Empty seats sit out. Want bots too? Deal them in from the Scoreboard.</p>
     <div class="pickGrid" id="pickGrid"></div>
     <div class="pickFoot">
       <span id="pickMsg"></span>
@@ -361,6 +367,10 @@ kbd{font:700 10px var(--body);padding:1px 5px;border-radius:4px;background:rgba(
       <thead><tr><th>#</th><th>Player</th><th>Chips</th><th class="rb">Rebuys</th><th>Score</th><th></th></tr></thead>
       <tbody id="scoreBody"></tbody>
     </table>
+    <div class="bulk">
+      <button class="btn ghost" id="botsIn" type="button">Deal all bots in</button>
+      <button class="btn ghost" id="botsOut" type="button">Sit out all bots</button>
+    </div>
     <p class="boardNote" id="scoreNote"></p>
   </div>
 </div>
@@ -726,9 +736,11 @@ async function decFrom(hostPk, e){
 
 /* ================= shared state ================= */
 function freshSeat(){ return {owner:null, chips:START, bet:0, total:0, folded:false, allIn:false, dealt:false, out:false, last:'', lastType:'', won:0, shown:null, enc:null, hand:'', rb:0}; }
-function freshState(){
+// A new live table starts with every seat sitting out: only people who pick a seat play,
+// and bots join only when someone deals them in from the Scoreboard. Solo mode keeps its bots.
+function freshState(botsIn = false){
   return {v:0, ep:'', et:0, hn:0, d:Math.floor(Math.random()*N), sb:-1, bb:-1, st:'wait', tu:-1, cb:0, mr:BB, bd:[], ti:'', tm:0,
-    su:'Pick a seat to start', hp:'', hu:'', hk:'', na:0, seats:PEOPLE.map(freshSeat)};
+    su:'Pick a seat to start', hp:'', hu:'', hk:'', na:0, seats:PEOPLE.map(() => Object.assign(freshSeat(), {out:!botsIn}))};
 }
 let S = freshState();
 const potTotal = () => S.seats.reduce((a, s) => a + s.total, 0);
@@ -1012,6 +1024,7 @@ function render(){
   renderControls();
   if (!picker.hidden) renderPicker();
   if (!scoreSheet.hidden) renderScoreboard();
+  renderMyScore();
 }
 
 function myHandText(){
@@ -1284,15 +1297,30 @@ function scoreOf(s){
   const live = inHand() && S.st !== 'done' ? s.total : 0;
   return s.chips + live - START*(1 + (s.rb || 0));
 }
-function renderScoreboard(){
-  const rows = S.seats.map((s, i) => ({i, s, sc:scoreOf(s), stack:s.chips + (inHand() && S.st !== 'done' ? s.total : 0)}))
+function scoreRanks(){
+  const rows = S.seats.map((s, i) => ({i, sc:scoreOf(s), stack:s.chips + (inHand() && S.st !== 'done' ? s.total : 0)}))
     .sort((a, b) => b.sc - a.sc || b.stack - a.stack || a.i - b.i);
+  const rank = [];
+  rows.forEach((r, k) => { rank[r.i] = k && r.sc === rows[k - 1].sc ? rank[rows[k - 1].i] : k + 1; });
+  return {rows, rank};
+}
+const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th','st','nd','rd'][n % 10] || 'th');
+function renderMyScore(){
+  const el = $('#myScore');
+  el.hidden = mySeat < 0;
+  if (mySeat < 0) return;
+  const sc = scoreOf(S.seats[mySeat]), {rank} = scoreRanks();
+  const txt = sc > 0 ? '+' + fmt(sc) : sc < 0 ? '−' + fmt(-sc) : '0';
+  el.innerHTML = `Score <b class="${sc > 0 ? 'up' : sc < 0 ? 'down' : ''}">${txt}</b> · ${ordinal(rank[mySeat])} of ${N}`;
+}
+function renderScoreboard(){
+  const {rows: ranked, rank: rankOf} = scoreRanks();
+  const rows = ranked.map(r => Object.assign(r, {s:S.seats[r.i]}));
   const canSit = mySeat >= 0 && hostAlive();
   const body = $('#scoreBody');
   body.textContent = '';
-  let rank = 0, prev = null;
-  rows.forEach((r, k) => {
-    if (r.sc !== prev){ rank = k + 1; prev = r.sc; }
+  rows.forEach(r => {
+    const rank = rankOf[r.i];
     const p = PEOPLE[r.i], tr = document.createElement('tr');
     tr.classList.toggle('me', r.i === mySeat);
     tr.classList.toggle('out', !!r.s.out);
@@ -1312,9 +1340,12 @@ function renderScoreboard(){
     }
     body.append(tr);
   });
+  const bots = S.seats.filter(s => !s.owner);
+  $('#botsIn').disabled = !canSit || !bots.some(s => s.out);
+  $('#botsOut').disabled = !canSit || !bots.some(s => !s.out);
   $('#scoreNote').textContent = canSit
-    ? 'Sit out takes a bot out from the next hand. It keeps its chips and score until you deal it back in.'
-    : 'Pick a seat to sit bots out or deal them back in.';
+    ? 'Changes apply from the next hand. A bot keeps its chips and score while it sits out.'
+    : 'Pick a seat to deal bots in or sit them out.';
 }
 function openSheet(el){ if (el === scoreSheet) renderScoreboard(); el.hidden = false; }
 function closeSheet(el){ el.hidden = true; }
@@ -1344,7 +1375,7 @@ function closeSheet(el){ el.hidden = true; }
 /* ================= host ================= */
 function newH(){
   return {hole:[], board5:[], hu:'', acted:Array(N).fill(false), fs:Array(N).fill(0), score:Array(N).fill(0), raises:0, actN:0,
-    pending:null, encSig:[], seenSay:{}, seenReset:{}, seenSit:{}, lastClaim:{}, offSince:{}, resetPending:''};
+    pending:null, encSig:[], seenSay:{}, seenReset:{}, seenSit:{}, lastClaim:{}, offSince:{}};
 }
 let talk = [], lastTalkI = 0;
 function makeWriter(path){
@@ -1407,20 +1438,23 @@ async function pump(){
     const m = bq.shift();
     if (m.delay) await wait(m.delay);
     if (!isHost){ bq.length = 0; break; }
+    if (!m.pid || (IDX[m.pid] !== undefined && benched(IDX[m.pid]))) continue;
     if (m.pid === 'tolendi' && !TOL.includes(m.text)){ m.text = pick(TOL); m.replies = TOL_R; m.rp = .45; }
+    if (m.pid === 'niti' && !/:\)\s*$/.test(m.text)) m.text += ' :)';
     talkLine(m.pid, m.text);
     if (m.replies && m.replies.length && chance(m.rp)){
       const si = IDX[m.pid];
       const rid = pickSpeaker([si]);
-      bq.unshift({pid:rid, text:fill(pick(m.replies), {a:PEOPLE[si], s:PEOPLE[IDX[rid]]}), delay:300, replies:null, rp:0});
+      if (rid) bq.unshift({pid:rid, text:fill(pick(m.replies), {a:PEOPLE[si], s:PEOPLE[IDX[rid]]}), delay:300, replies:null, rp:0});
     }
     await wait(1400);
   }
   bqBusy = false;
 }
+const benched = i => !S.seats[i].owner && S.seats[i].out;   // a bot sitting out doesn't talk
 function pickSpeaker(exIdx = []){
-  const pool = PEOPLE.map((p, i) => i).filter(i => !exIdx.includes(i));
-  return PEOPLE[pick(pool)].id;
+  const pool = PEOPLE.map((p, i) => i).filter(i => !exIdx.includes(i) && !benched(i));
+  return pool.length ? PEOPLE[pick(pool)].id : null;
 }
 function nitiAccuse(){
   S.na = 1;
@@ -1435,7 +1469,7 @@ function sigLine(delay = 0, exIdx = []){
 function chatter(pool, sigChance = .3, exIdx = []){
   if (chance(sigChance)) return sigLine(0, exIdx);
   const sp = pickSpeaker(exIdx);
-  say(sp, fill(pick(pool), {s:PEOPLE[IDX[sp]], d:PEOPLE[S.d]}));
+  if (sp) say(sp, fill(pick(pool), {s:PEOPLE[IDX[sp]], d:PEOPLE[S.d]}));
 }
 function idleLine(){
   const it = pick(IDLE);
@@ -1449,7 +1483,8 @@ function hostClaim(k, req){
   if (req === '' || req === null){
     if (cur < 0) return false;
     S.seats[cur].owner = null;
-    talkLine('', `${nameOf(cur)} left the seat · a bot takes over`);
+    S.seats[cur].out = !localMode;
+    talkLine('', localMode ? `${nameOf(cur)} left the seat · a bot takes over` : `${nameOf(cur)} left the seat`);
     publish(); refreshEnc();
     return true;
   }
@@ -1458,7 +1493,7 @@ function hostClaim(k, req){
   if (idx === cur) return false;
   const o = S.seats[idx].owner;
   if (o && o !== k && isOnlineKey(o)) return false;
-  if (cur >= 0) S.seats[cur].owner = null;
+  if (cur >= 0){ S.seats[cur].owner = null; S.seats[cur].out = !localMode; }
   S.seats[idx].owner = k;
   S.seats[idx].out = false;
   delete H.offSince[k];
@@ -1483,17 +1518,35 @@ function hostChat(k, t){
 function hostReset(k){
   const idx = S.seats.findIndex(s => s.owner === k);
   if (idx < 0 || !H) return;
-  H.resetPending = nameOf(idx);
-  talkLine('', `${nameOf(idx)} reset the chips · everyone goes back to ${fmt(START)} before the next hand`);
+  // Stop the running hand (its engine unwinds on the next await), reset every stack and
+  // rebuy count right now so the scoreboard goes back to zero, then deal on with a fresh engine.
+  if (engine) engine.alive = false;
+  H.pending = null;
+  const cancelled = inHand();
+  S.seats.forEach(s => Object.assign(s, {chips:START, rb:0, bet:0, total:0, folded:false, allIn:false, dealt:false, last:'', lastType:'', won:0, shown:null, enc:null, hand:''}));
+  S.bd = []; S.st = 'wait'; S.tu = -1; S.ti = ''; S.tm = 0; S.cb = 0; S.mr = BB;
+  S.su = `${nameOf(idx)} reset the chips · everyone is back to ${fmt(START)}`;
+  talkLine('', S.su + (cancelled ? ' (the hand in progress was cancelled)' : ''));
+  publish();
+  engine = startEngine();
 }
 function hostSit(k, id, out){
   const me = S.seats.findIndex(s => s.owner === k);
+  if (me < 0) return;
+  if (id === '*'){
+    const bots = S.seats.filter(s => !s.owner && !!s.out !== !!out);
+    if (!bots.length) return;
+    bots.forEach(s => { s.out = !!out; });
+    talkLine('', out ? `${nameOf(me)} sat all the bots out` : `${nameOf(me)} dealt all the bots in`);
+    publish();
+    return;
+  }
   const t = IDX[id];
-  if (me < 0 || t === undefined) return;
+  if (t === undefined) return;
   const s = S.seats[t];
   if (s.owner || !!s.out === !!out) return;
   s.out = !!out;
-  talkLine('', out ? `${nameOf(me)} sat ${nameOf(t)} out` : `${nameOf(me)} dealt ${nameOf(t)} back in`);
+  talkLine('', out ? `${nameOf(me)} sat ${nameOf(t)} out` : `${nameOf(me)} dealt ${nameOf(t)} in`);
   publish();
 }
 function hostScanActs(){
@@ -1655,6 +1708,7 @@ function endBanter(w, showdown){
     if (!S.na) return nitiAccuse();
     if (chance(.85)){
       const sp = pickSpeaker([w]);
+      if (!sp) return;
       say(sp, pick(L.vedantWin), 0, false, null);
       if (chance(.5)) say('vedant', fill(pick(L.vedantDefend), {a:PEOPLE[IDX[sp]]}), 300);
     }
@@ -1872,7 +1926,8 @@ function startEngine(){
     S.seats.forEach((s, i) => {
       if (s.owner && !isOnlineKey(s.owner) && H.offSince[s.owner] && now - H.offSince[s.owner] > RELEASE_MS){
         s.owner = null;
-        talkLine('', `${nameOf(i)} disconnected · a bot takes over`);
+        s.out = !localMode;
+        talkLine('', localMode ? `${nameOf(i)} disconnected · a bot takes over` : `${nameOf(i)} disconnected · their seat sits out`);
       }
     });
   }
@@ -1931,19 +1986,13 @@ function startEngine(){
   async function loop(){
     for (;;){
       if (!EN.alive) return;
-      if (H.resetPending){
-        H.resetPending = '';
-        S.seats.forEach(s => { s.chips = START; s.rb = 0; });
-        talkLine('', `Chips reset. Everyone is back to ${fmt(START)}`);
-        publish();
-      }
       if (!anyHumanSeated()){
         if (S.st !== 'wait'){ S.st = 'wait'; S.tu = -1; S.tm = 0; S.ti = ''; S.su = 'Waiting for players to pick a seat'; publish(); }
         await sleep(700);
         continue;
       }
       if (S.seats.filter(s => !s.out).length < 2){
-        const msg = 'Everyone else is sitting out · deal a bot back in from the Scoreboard';
+        const msg = localMode ? 'Every bot is sitting out · deal them in from the Scoreboard' : 'Nobody to play against yet · wait for friends or deal bots in from the Scoreboard';
         if (S.st !== 'wait' || S.su !== msg){ S.st = 'wait'; S.tu = -1; S.tm = 0; S.ti = ''; S.su = msg; publish(); }
         await sleep(700);
         continue;
@@ -2004,7 +2053,7 @@ function demote(){
 function goLocal(){
   localMode = true; capsReady = true; isHost = true;
   H = newH();
-  S = freshState();
+  S = freshState(true);
   S.ep = randId(); S.et = Date.now();
   $('#pickSub').textContent = 'Pick your name to play that seat. Live multiplayer is not available here, so every other seat is a bot.';
   if (myReq !== undefined) hostClaim(myKey, myReq);
@@ -2157,6 +2206,9 @@ $('#tGaali').addEventListener('click', () => { gaali = !gaali; lsSet('bp.gaali',
 $('#tSpeed').addEventListener('click', () => { pace = pace < 1 ? 1 : 0.5; syncToggles(); });
 let resetArm = null;
 $('#tScore').addEventListener('click', () => openSheet(scoreSheet));
+$('#myScore').addEventListener('click', () => openSheet(scoreSheet));
+$('#botsIn').addEventListener('click', () => requestSit('*', false));
+$('#botsOut').addEventListener('click', () => requestSit('*', true));
 $('#tHands').addEventListener('click', () => openSheet(handsSheet));
 $('#seatsLayer').addEventListener('click', e => { if (e.target.closest('.plate')) openSheet(scoreSheet); });
 document.addEventListener('keydown', e => {
