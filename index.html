@@ -136,6 +136,8 @@ h1 span{color:var(--gold)}
 .seat.turn .plate{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 26px rgba(253,181,21,.5)}
 .seat.win .plate{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 30px rgba(253,181,21,.6)}
 .seat.folded .plate{opacity:.45}
+.seat.out .plate{opacity:.4}
+.plate{pointer-events:auto;cursor:pointer}
 
 .bet{position:absolute;translate:-50% -50%;display:flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border-radius:99px;background:rgba(2,16,32,.55);font:700 13px var(--body);color:#F4F7FB;font-variant-numeric:tabular-nums;white-space:nowrap}
 .stage[data-mode="port"] .bet{font-size:15px}
@@ -219,6 +221,42 @@ kbd{font:700 10px var(--body);padding:1px 5px;border-radius:4px;background:rgba(
 .pickFoot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-top:16px}
 #pickMsg{color:var(--gold);font-weight:700;font-size:13px;min-height:18px}
 
+/* ---------- scoreboard + hand rankings sheets ---------- */
+.sheetHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.sheetX{flex:none;width:36px;height:36px;border-radius:50%;background:#0F2034;border:1px solid var(--line);font:700 18px var(--body);cursor:pointer}
+.sheetX:hover{border-color:var(--gold)}
+.board-tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.board-tbl th{font:800 11px var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:right;padding:0 8px 8px;border-bottom:1px solid var(--line)}
+.board-tbl th:nth-child(2){text-align:left}
+.board-tbl td{padding:8px;border-bottom:1px solid rgba(30,53,83,.6);text-align:right;font-weight:700;white-space:nowrap}
+.board-tbl td.rk{color:var(--muted);width:1%;text-align:center}
+.board-tbl td.who{text-align:left;white-space:normal}
+.board-tbl tr.me td{background:rgba(253,181,21,.06)}
+.board-tbl tr.out td:not(:last-child){opacity:.5}
+.whoIn{display:flex;align-items:center;gap:9px;min-width:0}
+.whoIn .av{width:28px;height:28px;font-size:13px;flex:none}
+.whoIn b{font:800 14px var(--body)}
+.whoIn small{display:block;font:700 10px var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.sc{font-size:15px}
+.sc.up{color:var(--ok)}
+.sc.down{color:#FF8A9A}
+.sitBtn{height:28px;padding:0 11px;border-radius:99px;background:#13263D;border:1px solid var(--line);font:700 12px var(--body);cursor:pointer;white-space:nowrap}
+.sitBtn:hover:not(:disabled){border-color:var(--gold)}
+.sitBtn.in{border-color:var(--ok);color:var(--ok)}
+.sitBtn:disabled{opacity:.45;cursor:not-allowed}
+.boardNote{margin:14px 0 0;color:var(--muted);font-size:12px;font-weight:600;line-height:1.5}
+@media (max-width:520px){.board-tbl .rb{display:none}.board-tbl td,.board-tbl th{padding-left:5px;padding-right:5px}}
+.hr{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.hr li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:4px 12px;align-items:center;padding:10px 12px;border-radius:14px;background:#0F2034;border:1px solid var(--line)}
+.hr .n{grid-row:span 2;font:900 22px var(--display);color:var(--gold);text-align:center}
+.hr h3{margin:0;font:800 15px var(--body)}
+.hr h3 span{font-weight:600;color:var(--muted);font-size:13px;margin-left:6px}
+.hrCards{display:flex;gap:4px;margin-top:6px}
+.hrCards .card{--cw:32px;--ch:45px}
+.hrCards .card.dim{opacity:.35}
+.hrTips{margin:14px 0 0;padding-left:18px;color:var(--muted);font-size:13px;font-weight:600;line-height:1.55}
+.hrTips b{color:var(--ink)}
+
 @media (prefers-reduced-motion:reduce){
   .card.deal,.card.flip,.bubble.show,.won,.seat.gain .plate{animation:none}
   .bubble,.plate{transition:none}
@@ -238,7 +276,9 @@ kbd{font:700 10px var(--body);padding:1px 5px;border-radius:4px;background:rgba(
       <button class="tog" id="tSeat" type="button">Pick your seat</button>
       <button class="tog" id="tGaali" type="button" aria-pressed="true">Gaali mode: On</button>
       <button class="tog" id="tSpeed" type="button" aria-pressed="false" hidden>Speed: 1x</button>
-      <button class="tog" id="tReset" type="button" hidden>Reset chips</button>
+      <button class="tog" id="tScore" type="button">Scoreboard</button>
+      <button class="tog" id="tHands" type="button">Hand rankings</button>
+      <button class="tog" id="tReset" type="button">Reset chips</button>
     </div>
   </header>
 
@@ -307,6 +347,37 @@ kbd{font:700 10px var(--body);padding:1px 5px;border-radius:4px;background:rgba(
       <span id="pickMsg"></span>
       <button class="btn ghost" id="pickWatch" type="button">Just watch</button>
     </div>
+  </div>
+</div>
+
+<div class="picker" id="scoreSheet" hidden>
+  <div class="pickCard" role="dialog" aria-modal="true" aria-labelledby="scoreTitle">
+    <div class="sheetHead">
+      <h2 id="scoreTitle">Scoreboard</h2>
+      <button class="sheetX" type="button" data-close aria-label="Close">×</button>
+    </div>
+    <p class="pickSub">Score = chips now minus everything you've taken: 1,000 to start plus 1,000 for every rebuy. Keep rebuying and you go negative.</p>
+    <table class="board-tbl">
+      <thead><tr><th>#</th><th>Player</th><th>Chips</th><th class="rb">Rebuys</th><th>Score</th><th></th></tr></thead>
+      <tbody id="scoreBody"></tbody>
+    </table>
+    <p class="boardNote" id="scoreNote"></p>
+  </div>
+</div>
+
+<div class="picker" id="handsSheet" hidden>
+  <div class="pickCard" role="dialog" aria-modal="true" aria-labelledby="handsTitle">
+    <div class="sheetHead">
+      <h2 id="handsTitle">Hand rankings</h2>
+      <button class="sheetX" type="button" data-close aria-label="Close">×</button>
+    </div>
+    <p class="pickSub">Best at the top. You make the best five-card hand from your two cards plus the five on the board. Any hand beats every hand below it.</p>
+    <ol class="hr" id="handsList"></ol>
+    <ul class="hrTips">
+      <li><b>Ties:</b> if two players have the same hand, the higher cards win (a pair of Kings beats a pair of Queens; with the same pair, the higher side card, the "kicker", wins).</li>
+      <li><b>Suits</b> never break ties. Equal hands split the pot.</li>
+      <li><b>Ace</b> is high, but it can also start a straight: A-2-3-4-5.</li>
+    </ul>
   </div>
 </div>
 
@@ -654,7 +725,7 @@ async function decFrom(hostPk, e){
 }
 
 /* ================= shared state ================= */
-function freshSeat(){ return {owner:null, chips:START, bet:0, total:0, folded:false, allIn:false, dealt:false, last:'', lastType:'', won:0, shown:null, enc:null, hand:'', rb:0}; }
+function freshSeat(){ return {owner:null, chips:START, bet:0, total:0, folded:false, allIn:false, dealt:false, out:false, last:'', lastType:'', won:0, shown:null, enc:null, hand:'', rb:0}; }
 function freshState(){
   return {v:0, ep:'', et:0, hn:0, d:Math.floor(Math.random()*N), sb:-1, bb:-1, st:'wait', tu:-1, cb:0, mr:BB, bd:[], ti:'', tm:0,
     su:'Pick a seat to start', hp:'', hu:'', hk:'', na:0, seats:PEOPLE.map(freshSeat)};
@@ -665,7 +736,7 @@ const potTotal = () => S.seats.reduce((a, s) => a + s.total, 0);
 function pack(){
   return {v:S.v, ep:S.ep, et:S.et, hn:S.hn, d:S.d, sb:S.sb, bb:S.bb, st:S.st, tu:S.tu, cb:S.cb, mr:S.mr, bd:S.bd, ti:S.ti, tm:S.tm,
     su:S.su, hp:S.hp, hu:S.hu, hk:S.hk, na:S.na,
-    s:S.seats.map(x => [x.owner || 0, x.chips, x.bet, x.total, (x.folded?1:0)|(x.allIn?2:0)|(x.dealt?4:0), x.last || '', x.lastType || '',
+    s:S.seats.map(x => [x.owner || 0, x.chips, x.bet, x.total, (x.folded?1:0)|(x.allIn?2:0)|(x.dealt?4:0)|(x.out?8:0), x.last || '', x.lastType || '',
       x.won || 0, x.shown || 0, x.enc || 0, x.hand || '', x.rb || 0])};
 }
 function unpack(o){
@@ -676,7 +747,7 @@ function unpack(o){
     a = Array.isArray(a) ? a : [];
     const shown = Array.isArray(a[8]) && a[8].length === 2 && a[8].every(validCard) ? a[8] : null;
     const enc = Array.isArray(a[9]) ? a[9].filter(e => Array.isArray(e) && e.length === 3 && e.every(x => typeof x === 'string')).slice(0, 6) : null;
-    return {owner:validKey(a[0]), chips:num(a[1]), bet:num(a[2]), total:num(a[3]), folded:!!(a[4] & 1), allIn:!!(a[4] & 2), dealt:!!(a[4] & 4),
+    return {owner:validKey(a[0]), chips:num(a[1]), bet:num(a[2]), total:num(a[3]), folded:!!(a[4] & 1), allIn:!!(a[4] & 2), dealt:!!(a[4] & 4), out:!!(a[4] & 8),
       last:str(a[5], 60), lastType:str(a[6], 20), won:num(a[7]), shown, enc:enc && enc.length ? enc : null, hand:str(a[10], 60), rb:num(a[11])};
   });
   const idx = x => (Number.isInteger(x) && x >= -1 && x < N) ? x : -1;
@@ -866,6 +937,8 @@ function render(){
     e.seat.classList.toggle('me', i === mySeat);
     e.seat.classList.toggle('turn', i === S.tu && bettingNow());
     e.seat.classList.toggle('folded', s.dealt && s.folded);
+    const sitting = s.out && !(s.dealt && inHand());
+    e.seat.classList.toggle('out', sitting);
     const landed = !fly.pending[i];
     e.seat.classList.toggle('win', s.won > 0 && landed);
     e.ch.textContent = fmt(s.chips - fly.pending[i]);
@@ -879,9 +952,9 @@ function render(){
     if (showBtn && i === S.bb) b += '<span class="blind bb">BB</span>';
     if (e.badges._b !== b){ e.badges.innerHTML = b; e.badges._b = b; }
 
-    e.tag.textContent = s.last;
-    e.tag.className = 'tag ' + (s.lastType || '');
-    e.tag.hidden = !s.last;
+    e.tag.textContent = sitting ? 'Sitting out' : s.last;
+    e.tag.className = 'tag ' + (sitting ? '' : (s.lastType || ''));
+    e.tag.hidden = !(sitting || s.last);
     e.won.textContent = s.won > 0 ? '+' + fmt(s.won) : '';
     e.won.hidden = !(s.won > 0 && landed);
 
@@ -938,6 +1011,7 @@ function render(){
   renderHeader();
   renderControls();
   if (!picker.hidden) renderPicker();
+  if (!scoreSheet.hidden) renderScoreboard();
 }
 
 function myHandText(){
@@ -1041,7 +1115,6 @@ function renderHeader(){
   ts.textContent = mySeat >= 0 ? `You're ${nameOf(mySeat)}` : 'Pick your seat';
   ts.classList.toggle('seat', mySeat < 0);
   $('#tSpeed').hidden = !isHost;
-  $('#tReset').hidden = !isHost;
 }
 
 /* ================= seat picker ================= */
@@ -1192,10 +1265,86 @@ function humanChat(text){
   else setPresence({say:{n:++sayN, t}});
 }
 
+let resetN = 0, sitN = 0;
+function requestReset(){
+  if (mySeat < 0) return;
+  if (isHost) hostReset(myKey);
+  else setPresence({reset:{n:++resetN}});
+}
+function requestSit(id, out){
+  if (mySeat < 0) return;
+  if (isHost) hostSit(myKey, id, out);
+  else setPresence({sit:{n:++sitN, id, out:!!out}});
+}
+
+/* ================= scoreboard + hand rankings ================= */
+const scoreSheet = $('#scoreSheet'), handsSheet = $('#handsSheet');
+function scoreOf(s){
+  // Mid-hand, chips already in the pot still count as yours until the hand is settled.
+  const live = inHand() && S.st !== 'done' ? s.total : 0;
+  return s.chips + live - START*(1 + (s.rb || 0));
+}
+function renderScoreboard(){
+  const rows = S.seats.map((s, i) => ({i, s, sc:scoreOf(s), stack:s.chips + (inHand() && S.st !== 'done' ? s.total : 0)}))
+    .sort((a, b) => b.sc - a.sc || b.stack - a.stack || a.i - b.i);
+  const canSit = mySeat >= 0 && hostAlive();
+  const body = $('#scoreBody');
+  body.textContent = '';
+  let rank = 0, prev = null;
+  rows.forEach((r, k) => {
+    if (r.sc !== prev){ rank = k + 1; prev = r.sc; }
+    const p = PEOPLE[r.i], tr = document.createElement('tr');
+    tr.classList.toggle('me', r.i === mySeat);
+    tr.classList.toggle('out', !!r.s.out);
+    const role = r.i === mySeat ? 'You' : r.s.owner ? (isOnlineKey(r.s.owner) ? 'Player' : 'Player · away') : r.s.out ? 'Sitting out' : 'Bot';
+    const sc = r.sc > 0 ? '+' + fmt(r.sc) : r.sc < 0 ? '−' + fmt(-r.sc) : '0';
+    tr.innerHTML = `<td class="rk">${rank}</td><td class="who"><div class="whoIn"><div class="av" style="--pc:${p.color}">${p.name[0]}</div><span><b>${p.name}</b><small>${role}</small></span></div></td>` +
+      `<td>${fmt(r.stack)}</td><td class="rb">${r.s.rb || 0}</td><td class="sc ${r.sc > 0 ? 'up' : r.sc < 0 ? 'down' : ''}">${sc}</td><td></td>`;
+    if (!r.s.owner){
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'sitBtn' + (r.s.out ? ' in' : '');
+      b.textContent = r.s.out ? 'Deal in' : 'Sit out';
+      b.disabled = !canSit;
+      b.title = canSit ? (r.s.out ? `Deal ${p.name} back in from the next hand` : `${p.name} sits out from the next hand`) : 'Pick a seat to change who plays';
+      b.addEventListener('click', () => requestSit(p.id, !r.s.out));
+      tr.lastElementChild.append(b);
+    }
+    body.append(tr);
+  });
+  $('#scoreNote').textContent = canSit
+    ? 'Sit out takes a bot out from the next hand. It keeps its chips and score until you deal it back in.'
+    : 'Pick a seat to sit bots out or deal them back in.';
+}
+function openSheet(el){ if (el === scoreSheet) renderScoreboard(); el.hidden = false; }
+function closeSheet(el){ el.hidden = true; }
+[scoreSheet, handsSheet].forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el || e.target.closest('[data-close]')) closeSheet(el); });
+});
+(function buildHands(){
+  const R = {'2':0,'3':1,'4':2,'5':3,'6':4,'7':5,'8':6,'9':7,'10':8,J:9,Q:10,K:11,A:12}, SU = {s:0,h:1,d:2,c:3};
+  const c = t => R[t.slice(0, -1)]*4 + SU[t.slice(-1)];
+  // [name, what it is, five example cards, how many of them make the hand (the rest are side cards)]
+  const HANDS = [
+    ['Royal Flush', 'A-K-Q-J-10, all the same suit', 'Ah Kh Qh Jh 10h', 5],
+    ['Straight Flush', 'Five in a row, all the same suit', '9s 8s 7s 6s 5s', 5],
+    ['Four of a Kind', 'Four cards of the same rank', 'Qs Qh Qd Qc 5d', 4],
+    ['Full House', 'Three of a kind plus a pair', 'Ks Kh Kd 7c 7h', 5],
+    ['Flush', 'Any five of the same suit', 'Ad Jd 8d 6d 2d', 5],
+    ['Straight', 'Five in a row, any suits', '10c 9d 8h 7s 6c', 5],
+    ['Three of a Kind', 'Three cards of the same rank', '7h 7d 7s Kc 3h', 3],
+    ['Two Pair', 'Two different pairs', 'Jc Jd 4s 4h Ah', 4],
+    ['One Pair', 'Two cards of the same rank', '10s 10h Kd 6c 2s', 2],
+    ['High Card', 'Nothing else: your highest card plays', 'Ac Jd 8h 5s 3c', 1],
+  ];
+  $('#handsList').innerHTML = HANDS.map(([name, what, cards, used], k) =>
+    `<li><span class="n">${k + 1}</span><h3>${name}<span>${what}</span></h3><div class="hrCards">${cards.split(' ').map((t, j) => cardHTML(c(t), j < used ? '' : 'dim')).join('')}</div></li>`).join('');
+})();
+
 /* ================= host ================= */
 function newH(){
   return {hole:[], board5:[], hu:'', acted:Array(N).fill(false), fs:Array(N).fill(0), score:Array(N).fill(0), raises:0, actN:0,
-    pending:null, encSig:[], seenSay:{}, lastClaim:{}, offSince:{}, resetPending:false};
+    pending:null, encSig:[], seenSay:{}, seenReset:{}, seenSit:{}, lastClaim:{}, offSince:{}, resetPending:''};
 }
 let talk = [], lastTalkI = 0;
 function makeWriter(path){
@@ -1311,6 +1460,7 @@ function hostClaim(k, req){
   if (o && o !== k && isOnlineKey(o)) return false;
   if (cur >= 0) S.seats[cur].owner = null;
   S.seats[idx].owner = k;
+  S.seats[idx].out = false;
   delete H.offSince[k];
   talkLine('', `${nameOf(idx)} sat down`);
   if (chance(.45)) say(pickSpeaker([idx]), fill(pick(L.join), {n:PEOPLE[idx]}), 700);
@@ -1329,6 +1479,22 @@ function hostChat(k, t){
   else if (/vedant|cheat/.test(low) && who.id !== 'vedant') say('vedant', fill(pick(L.vedantDefend), {a:who}), 900);
   else if (/bitch|\bmf\b|\bbc\b|\bmc\b|chut|gaand|bhen|madar|saal|fuck/.test(low)) say(pickSpeaker([idx]), fill(pick(L.chatSwear), {a:who}), 900);
   else if (chance(.35)) say(pickSpeaker([idx]), fill(pick(L.chatAny), {a:who}), 900);
+}
+function hostReset(k){
+  const idx = S.seats.findIndex(s => s.owner === k);
+  if (idx < 0 || !H) return;
+  H.resetPending = nameOf(idx);
+  talkLine('', `${nameOf(idx)} reset the chips · everyone goes back to ${fmt(START)} before the next hand`);
+}
+function hostSit(k, id, out){
+  const me = S.seats.findIndex(s => s.owner === k);
+  const t = IDX[id];
+  if (me < 0 || t === undefined) return;
+  const s = S.seats[t];
+  if (s.owner || !!s.out === !!out) return;
+  s.out = !!out;
+  talkLine('', out ? `${nameOf(me)} sat ${nameOf(t)} out` : `${nameOf(me)} dealt ${nameOf(t)} back in`);
+  publish();
 }
 function hostScanActs(){
   if (!isHost || !H || !H.pending || !room) return;
@@ -1358,6 +1524,12 @@ function hostProcessPeers(initial){
     const n = sy && typeof sy === 'object' && typeof sy.n === 'number' ? sy.n : 0;
     if (initial) H.seenSay[p.peer] = n;
     else if (n > (H.seenSay[p.peer] || 0)){ H.seenSay[p.peer] = n; hostChat(k, sy.t); }
+    const rs = pr.reset, rn = rs && typeof rs === 'object' && typeof rs.n === 'number' ? rs.n : 0;
+    if (initial) H.seenReset[p.peer] = rn;
+    else if (rn > (H.seenReset[p.peer] || 0)){ H.seenReset[p.peer] = rn; hostReset(k); }
+    const st = pr.sit, sn = st && typeof st === 'object' && typeof st.n === 'number' ? st.n : 0;
+    if (initial) H.seenSit[p.peer] = sn;
+    else if (sn > (H.seenSit[p.peer] || 0)){ H.seenSit[p.peer] = sn; hostSit(k, st.id, st.out); }
   }
   S.seats.forEach(s => {
     if (!s.owner) return;
@@ -1710,21 +1882,25 @@ function startEngine(){
     S.hu = `${S.ep}.${S.hn}`;
     let rebuyNoted = false;
     S.seats.forEach((s, i) => {
-      if (s.chips <= 0){
+      if (s.chips <= 0 && !s.out){
         s.chips = START;
         s.rb = (s.rb || 0) + 1;
         talkLine('', `${nameOf(i)} rebuys for ${fmt(START)}`);
         if (!rebuyNoted && chance(.8)){ rebuyNoted = true; say(pickSpeaker([i]), fill(pick(L.rebuy), {n:PEOPLE[i]})); }
       }
     });
-    S.seats.forEach(s => Object.assign(s, {bet:0, total:0, folded:false, allIn:false, dealt:true, last:'', lastType:'', won:0, shown:null, enc:null, hand:''}));
+    S.seats.forEach(s => Object.assign(s, {bet:0, total:0, folded:false, allIn:false, dealt:!s.out, last:'', lastType:'', won:0, shown:null, enc:null, hand:''}));
     H.acted = Array(N).fill(false); H.score = Array(N).fill(0); H.raises = 0; H.encSig = [];
     const deck = Array.from({length:52}, (_, i) => i);
     for (let i = deck.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
-    S.d = next(S.d); S.sb = next(S.d); S.bb = next(S.sb);
+    // Button and blinds move only among seats dealt in. Heads-up, the dealer posts the small blind.
+    const nextIn = i => { for (let k = 1; k <= N; k++){ const j = (i + k) % N; if (S.seats[j].dealt) return j; } return i; };
+    S.d = nextIn(S.d);
+    if (S.seats.filter(s => s.dealt).length === 2){ S.sb = S.d; S.bb = nextIn(S.d); }
+    else { S.sb = nextIn(S.d); S.bb = nextIn(S.sb); }
     S.st = 'preflop'; S.cb = 0; S.mr = BB; S.tu = -1; S.ti = ''; S.tm = 0; S.bd = [];
     H.hole = Array.from({length:N}, () => []);
-    for (let r = 0; r < 2; r++) for (let k = 0; k < N; k++) H.hole[(S.sb + k) % N].push(deck.pop());
+    for (let r = 0; r < 2; r++) for (let k = 0; k < N; k++){ const j = (S.sb + k) % N; if (S.seats[j].dealt) H.hole[j].push(deck.pop()); }
     H.board5 = deck.splice(-5, 5);
     H.hu = S.hu;
     talkLine('', `Hand #${S.hn} · ${nameOf(S.d)} deals`);
@@ -1756,13 +1932,19 @@ function startEngine(){
     for (;;){
       if (!EN.alive) return;
       if (H.resetPending){
-        H.resetPending = false;
+        H.resetPending = '';
         S.seats.forEach(s => { s.chips = START; s.rb = 0; });
-        talkLine('', 'Chips reset. Everyone is back to 1,000');
+        talkLine('', `Chips reset. Everyone is back to ${fmt(START)}`);
         publish();
       }
       if (!anyHumanSeated()){
         if (S.st !== 'wait'){ S.st = 'wait'; S.tu = -1; S.tm = 0; S.ti = ''; S.su = 'Waiting for players to pick a seat'; publish(); }
+        await sleep(700);
+        continue;
+      }
+      if (S.seats.filter(s => !s.out).length < 2){
+        const msg = 'Everyone else is sitting out · deal a bot back in from the Scoreboard';
+        if (S.st !== 'wait' || S.su !== msg){ S.st = 'wait'; S.tu = -1; S.tm = 0; S.ti = ''; S.su = msg; publish(); }
         await sleep(700);
         continue;
       }
@@ -1930,7 +2112,7 @@ document.querySelectorAll('.pre').forEach(b => b.addEventListener('click', () =>
   updRaise();
 }));
 document.addEventListener('keydown', e => {
-  if (e.target.matches('input[type="text"], textarea') || !picker.hidden) return;
+  if (e.target.matches('input[type="text"], textarea') || !picker.hidden || !scoreSheet.hidden || !handsSheet.hidden) return;
   if (!myTurnNow() || e.metaKey || e.ctrlKey || e.altKey) return;
   const k = e.key.toLowerCase();
   if (k === 'f') $('#bFold').click();
@@ -1974,8 +2156,22 @@ function syncToggles(){
 $('#tGaali').addEventListener('click', () => { gaali = !gaali; lsSet('bp.gaali', gaali ? '1' : '0'); syncToggles(); rerenderTalk(); });
 $('#tSpeed').addEventListener('click', () => { pace = pace < 1 ? 1 : 0.5; syncToggles(); });
 let resetArm = null;
+$('#tScore').addEventListener('click', () => openSheet(scoreSheet));
+$('#tHands').addEventListener('click', () => openSheet(handsSheet));
+$('#seatsLayer').addEventListener('click', e => { if (e.target.closest('.plate')) openSheet(scoreSheet); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!scoreSheet.hidden) closeSheet(scoreSheet);
+  if (!handsSheet.hidden) closeSheet(handsSheet);
+});
 $('#tReset').addEventListener('click', () => {
   const b = $('#tReset');
+  if (mySeat < 0){
+    clearTimeout(resetArm); resetArm = null;
+    b.textContent = 'Pick a seat first';
+    setTimeout(() => { if (!resetArm) b.textContent = 'Reset chips'; }, 2000);
+    return;
+  }
   if (!resetArm){
     b.textContent = 'Tap again to reset';
     b.classList.add('danger');
@@ -1984,7 +2180,7 @@ $('#tReset').addEventListener('click', () => {
   }
   clearTimeout(resetArm); resetArm = null;
   b.textContent = 'Reset chips'; b.classList.remove('danger');
-  if (isHost && H) H.resetPending = true;
+  requestReset();
 });
 
 if ('ResizeObserver' in window) new ResizeObserver(() => layout()).observe(wrap);
